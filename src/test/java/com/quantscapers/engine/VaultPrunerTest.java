@@ -55,9 +55,10 @@ public class VaultPrunerTest {
 
     @Test
     public void deadQuote_bothSidesStale() {
+        // QUOTE_STALE_SEC = 2700 (45min) as of 2026-07-17 - was 1800 (30min).
         long nowMs = 1_000_000_000L;
         long nowSec = nowMs / 1000;
-        PriceQuote q = quote(110, nowSec - 2400, 100, nowSec - 2400);
+        PriceQuote q = quote(110, nowSec - 2800, 100, nowSec - 2800);
         assertFalse(VaultPruner.isQuoteHealthy(q, nowMs));
     }
 

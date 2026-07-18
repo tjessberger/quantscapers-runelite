@@ -521,6 +521,7 @@ public class ItemCardBox extends JPanel {
         b.setContentAreaFilled(false);
         b.setFocusPainted(false);
         b.setMargin(new java.awt.Insets(0, 4, 0, 0));
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return b;
     }
 

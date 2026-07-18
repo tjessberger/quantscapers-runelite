@@ -35,9 +35,12 @@ public final class VerdictEngine {
     }
 
     public static boolean isBestBet(AnalyzedItem it) {
-        return it.getEft() <= 40
-            && it.getRealisticProfit() >= 1_000_000
-            && it.getRoi() >= 3
+        // Relaxed 2026-07-17 to match quantscapers.com/worker's isBestBet - the old
+        // 40min/1M/3% floor was silently hiding low-volume megarares (Twisted Bow etc.)
+        // from Top Picks. Keep this numerically identical to the web/worker copies.
+        return it.getEft() <= 90
+            && it.getRealisticProfit() >= 500_000
+            && it.getRoi() >= 2
             && !isStaleQuote(it)
             && !isPossibleTrap(it);
     }
@@ -77,7 +80,7 @@ public final class VerdictEngine {
             return avoid("Spread far above this item's normal — likely price manipulation.");
         }
         if (isStaleQuote(it)) {
-            return avoid("Quotes over 30m old — this margin may no longer exist.");
+            return avoid("Quotes over 45m old — this margin may no longer exist.");
         }
         if (it.getRoi() <= 0 || it.getRealisticProfit() <= 0) {
             return avoid("No profit left after tax at current prices.");

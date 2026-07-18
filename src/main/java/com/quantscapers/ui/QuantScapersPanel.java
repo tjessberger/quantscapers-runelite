@@ -45,6 +45,7 @@ public class QuantScapersPanel extends PluginPanel {
     private final ItemManager itemManager;
 
     private final HeaderBar headerBar;
+    private final SiteLinksBar siteLinksBar;
     private final FilterBar filterBar;
     private final TopPicksBox topPicksBox;
     private final VaultBox vaultBox;
@@ -78,6 +79,7 @@ public class QuantScapersPanel extends PluginPanel {
         setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
         headerBar = new HeaderBar(this::onManualRefresh);
+        siteLinksBar = new SiteLinksBar();
         filterBar = new FilterBar(plugin);
         topPicksBox = new TopPicksBox(plugin);
         topPicksBox.addPropertyChangeListener("auditComplete", e -> rerenderFromCache());
@@ -95,6 +97,7 @@ public class QuantScapersPanel extends PluginPanel {
         north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
         north.setOpaque(false);
         north.add(headerBar);
+        north.add(siteLinksBar);
         north.add(emailNotice);
         north.add(filterBar);
         north.add(errorBanner);
@@ -305,8 +308,11 @@ public class QuantScapersPanel extends PluginPanel {
     }
 
     private void refreshEmailNotice() {
-        String email = plugin.getConfig().contactEmail();
-        emailNotice.setVisible(email == null || email.trim().isEmpty());
+        // Same plausibility check as QuantScapersPlugin#isGated() - previously this
+        // only checked non-empty, so typing "x" made the "set a contact email"
+        // banner disappear while the gate screen (which does check format) stayed up,
+        // a contradictory UI with no clue what was actually wrong.
+        emailNotice.setVisible(!Constants.isPlausibleEmail(plugin.getConfig().contactEmail()));
     }
 
     private JPanel buildEmailNotice() {

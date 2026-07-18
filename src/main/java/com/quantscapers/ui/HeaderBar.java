@@ -1,6 +1,7 @@
 package com.quantscapers.ui;
 
 import com.quantscapers.QSColors;
+import com.quantscapers.engine.Constants;
 import java.awt.BorderLayout;
 import java.awt.Cursor;
 import java.awt.FlowLayout;
@@ -40,7 +41,7 @@ public class HeaderBar extends JPanel {
         countdownLabel.setForeground(QSColors.SLATE_400);
         countdownLabel.setFont(FontManager.getRunescapeSmallFont());
         countdownLabel.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
-        setCountdown(30);
+        setCountdown(Constants.HEARTBEAT_SECONDS);
 
         JButton refresh = new JButton("⟳");
         refresh.setFont(FontManager.getRunescapeBoldFont());

@@ -44,15 +44,16 @@ public class VerdictEngineTest {
     }
 
     @Test
-    public void stale_flaggedWhenBothTimestampsOver30MinOld() {
-        AnalyzedItem it = base().highTime(NOW_SEC - 2000).lowTime(NOW_SEC - 2000).build();
+    public void stale_flaggedWhenBothTimestampsOver45MinOld() {
+        // QUOTE_STALE_SEC = 2700 (45min) as of 2026-07-17 - was 1800 (30min).
+        AnalyzedItem it = base().highTime(NOW_SEC - 2800).lowTime(NOW_SEC - 2800).build();
         assertTrue(VerdictEngine.isStaleQuote(it));
         assertEquals(Verdict.Rating.AVOID, VerdictEngine.verdict(it, null).getRating());
     }
 
     @Test
     public void stale_notFlaggedWhenATimestampIsMissing() {
-        AnalyzedItem it = base().highTime(0).lowTime(NOW_SEC - 2000).build();
+        AnalyzedItem it = base().highTime(0).lowTime(NOW_SEC - 2800).build();
         assertNull(VerdictEngine.quoteAgeSec(it));
         assertFalse(VerdictEngine.isStaleQuote(it));
     }
@@ -96,10 +97,21 @@ public class VerdictEngineTest {
 
     @Test
     public void isBestBet_requiresAllGates() {
+        // Thresholds relaxed 2026-07-17 to match quantscapers.com/worker:
+        // eft<=90 (was 40), profit>=500k (was 1M), roi>=2 (was 3).
         AnalyzedItem good = base().eft(20).realisticProfit(2_000_000L).roi(5).build();
         assertTrue(VerdictEngine.isBestBet(good));
 
-        AnalyzedItem tooSlow = base().eft(41).realisticProfit(2_000_000L).roi(5).build();
+        AnalyzedItem tooSlow = base().eft(91).realisticProfit(2_000_000L).roi(5).build();
         assertFalse(VerdictEngine.isBestBet(tooSlow));
+
+        AnalyzedItem tooLowProfit = base().eft(20).realisticProfit(499_999L).roi(5).build();
+        assertFalse(VerdictEngine.isBestBet(tooLowProfit));
+
+        AnalyzedItem tooLowRoi = base().eft(20).realisticProfit(2_000_000L).roi(1.9).build();
+        assertFalse(VerdictEngine.isBestBet(tooLowRoi));
+
+        AnalyzedItem atBoundary = base().eft(90).realisticProfit(500_000L).roi(2).build();
+        assertTrue(VerdictEngine.isBestBet(atBoundary));
     }
 }

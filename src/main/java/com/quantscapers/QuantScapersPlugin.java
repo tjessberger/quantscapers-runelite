@@ -92,6 +92,8 @@ public class QuantScapersPlugin extends Plugin {
     // render time (never hand the live map to Swing - see renderCurrentState()).
     private final Map<Integer, AuditResult> auditCache = new ConcurrentHashMap<>();
     private final AutoAuditBudget autoAuditBudget = new AutoAuditBudget();
+    // Separate budget/window from autoAuditBudget - see tryConsumeManualAuditBudget().
+    private final AutoAuditBudget manualAuditBudget = new AutoAuditBudget();
 
     // Same discipline as auditCache - written on the executor thread, only ever
     // handed to Swing as a snapshot copy taken at render time.
@@ -164,11 +166,29 @@ public class QuantScapersPlugin extends Plugin {
     /** Runs a deep-probe audit for one item, off the auto-audit budget. onComplete fires on the EDT. */
     public void requestAudit(AnalyzedItem item, Runnable onComplete) {
         executor.execute(() -> {
-            if (!isGated()) {
+            if (!isGated() && tryConsumeManualAuditBudget()) {
                 auditItemBlocking(item);
             }
             SwingUtilities.invokeLater(onComplete);
         });
+    }
+
+    /** Same silent-skip-and-still-fire-callback pattern as the auditInFlight CAS below. */
+    private boolean tryConsumeManualAuditBudget() {
+        long now = System.currentTimeMillis();
+        synchronized (manualAuditBudget) {
+            if (now - manualAuditBudget.windowStartMs > Constants.MANUAL_AUDIT_WINDOW_MS) {
+                manualAuditBudget.windowStartMs = now;
+                manualAuditBudget.count = 0;
+            }
+            if (manualAuditBudget.count >= Constants.MANUAL_AUDIT_MAX_CALLS) {
+                log.info("QuantScapers: manual audit rate limit hit ({}/{}min this window) - skipping",
+                    Constants.MANUAL_AUDIT_MAX_CALLS, Constants.MANUAL_AUDIT_WINDOW_MS / 60_000);
+                return false;
+            }
+            manualAuditBudget.count++;
+            return true;
+        }
     }
 
     /** Adds the item to the vault with a snapshot of its current buy/sell/tax. No-op past the entry cap. */
@@ -231,7 +251,8 @@ public class QuantScapersPlugin extends Plugin {
             return;
         }
         if ("auditCacheJson".equals(event.getKey()) || "vaultJson".equals(event.getKey())
-            || "vaultCollapsed".equals(event.getKey()) || "suppressedJson".equals(event.getKey())) {
+            || "vaultCollapsed".equals(event.getKey()) || "suppressedJson".equals(event.getKey())
+            || "customPresetsJson".equals(event.getKey())) {
             // Our own persistence write-back, not a real filter/setting change -
             // reacting to it would double-render every audit or vault mutation.
             return;
@@ -684,6 +705,15 @@ public class QuantScapersPlugin extends Plugin {
 
         for (AnalyzedItem it : analyzed) {
             if (it.getFullLimitCost() > maxBuyPrice) {
+                continue;
+            }
+
+            // Notifications previously matched on profit/ROI alone, bypassing the same
+            // stale-quote/trap guards every verdict and Top Pick already respects - a
+            // manipulated spread (exactly what this plugin exists to catch) could fire
+            // a "New Flip!" notification. Both flip and alch notifications now require
+            // passing these gates first, same as isBestBet/getVerdict.
+            if (VerdictEngine.isStaleQuote(it) || VerdictEngine.isPossibleTrap(it)) {
                 continue;
             }
 

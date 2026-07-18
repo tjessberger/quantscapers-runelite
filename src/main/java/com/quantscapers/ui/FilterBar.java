@@ -50,6 +50,12 @@ public class FilterBar extends JPanel {
     // programmatic setSelectedItem() doesn't echo straight back into config.
     private boolean syncing = false;
 
+    // syncFromConfig() runs on every ~30s render, but rebuildPresetCombo() does
+    // removeAllItems()+re-add, which force-closes the dropdown if it happened to be
+    // open - and previously ran unconditionally every time. Only rebuild when the
+    // actual set of custom preset names has changed since the last sync.
+    private java.util.Set<String> lastPresetNames = java.util.Collections.emptySet();
+
     public FilterBar(QuantScapersPlugin plugin) {
         this.plugin = plugin;
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
@@ -136,7 +142,10 @@ public class FilterBar extends JPanel {
     /** Pushes the current config values into every combo without re-triggering their listeners. */
     public void syncFromConfig() {
         loadCustomPresets();
-        rebuildPresetCombo();
+        if (!customPresets.keySet().equals(lastPresetNames)) {
+            rebuildPresetCombo();
+            lastPresetNames = new java.util.LinkedHashSet<>(customPresets.keySet());
+        }
         syncing = true;
         try {
             sortCombo.setSelectedItem(plugin.getConfig().sortBy());
