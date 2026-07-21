@@ -6,7 +6,9 @@ QuantScapers helps you understand the Grand Exchange before you act: scan
 profitable flips and alchs, spot liquid market movers, research individual
 items, and keep a local Watchlist of prices that matter to you.
 
-![QuantScapers screenshot](screenshot.png)
+| Market Overview | Scanner | Watchlist |
+| --- | --- | --- |
+| ![Market Overview](screenshots/overview.png) | ![Scanner](screenshots/scanner.png) | ![Watchlist](screenshots/watchlist.png) |
 
 ## What you can do
 

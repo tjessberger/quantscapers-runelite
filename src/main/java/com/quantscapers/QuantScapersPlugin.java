@@ -56,8 +56,8 @@ import okhttp3.OkHttpClient;
 @Slf4j
 @PluginDescriptor(
     name = "QuantScapers",
-    description = "Democratized GE flip intel: free verdicts, tickets, and trap guards",
-    tags = {"grand", "exchange", "flipping", "money", "prices", "merch"}
+    description = "OSRS economy toolset for market awareness, scanning, research, audits, and watchlists",
+    tags = {"grand", "exchange", "economy", "market", "flipping", "alchemy", "prices", "money", "watchlist"}
 )
 public class QuantScapersPlugin extends Plugin {
 
