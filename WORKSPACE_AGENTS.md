@@ -2,8 +2,6 @@
      outside this repo). Don't hand-edit; edit the canonical file and
      re-copy to all project repos instead, or changes will drift. -->
 
-# Web Projects — Workspace Rules (Antigravity)
-
 This file is the **single source of truth** for workspace rules, so any
 agent (Claude Code, Antigravity, Codex, or another tool) can pick up
 exactly where the last one left off. Claude Code's `~/.claude/CLAUDE.md`
@@ -13,6 +11,15 @@ silently picking one.
 
 Each project folder also has its own `AGENTS.md` with project-specific
 architecture. Read this file first, then the project's own.
+
+Each project repo also has a `WORKLOG.md` — a short, append-only log of
+recent sessions' work (including anything uncommitted/local-only, and
+anything deliberately left undone), separate from the standing rules in
+`AGENTS.md`. Read it before starting work in that repo, and update it
+before ending a session, whichever agent you are. Keep entries short and
+recent — this is a perishable session log, not permanent history;
+`git log`/commit messages are the permanent record. Prune old entries
+rather than letting the file grow forever.
 
 ## How this workspace is laid out
 
