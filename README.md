@@ -1,53 +1,76 @@
 # QuantScapers
 
-A verdict-first Grand Exchange flipping terminal, in-client.
+An in-client **OSRS Economy Toolset** for RuneLite.
 
-Every tradeable item gets a deterministic **BUY / DECENT / RISKY / AVOID**
-call with a plain-English reason, plus an exact order ticket (quantity,
-buy price, sell price, after-tax profit, walk-away timer) so you know
-precisely what to place and when to walk away.
+QuantScapers helps you understand the Grand Exchange before you act: scan
+profitable flips and alchs, spot liquid market movers, research individual
+items, and keep a local Watchlist of prices that matter to you.
 
-![screenshot](screenshot.png)
+![QuantScapers screenshot](screenshot.png)
 
-## Features
+## What you can do
 
-- **Verdicts, not just numbers.** Every card explains *why* — stale quotes,
-  possible price manipulation, cooling momentum, or a clean, fast, profitable
-  flip.
-- **Order tickets.** Buy quantity, buy+1, sell−1, after-tax profit, and a
-  walk-away timer, ready to copy into the Grand Exchange.
-- **Top Picks.** The three best flips ranked by GP/hour, auto-audited against
-  a deep-probe of hourly price history.
-- **Trust guards.** Stale-quote detection (>30 min old), trap detection
-  (spread far outside an item's own 24h norm on thin volume), and a momentum
-  signal (5-minute average vs 24-hour average).
-- **Deep-Probe Audit.** On demand, pulls an item's hourly price history to
-  compute a sell-price hit rate and a 7-day margin stability grade (A–F).
+- **Overview the market.** See a local Market Pulse plus 24-hour Top Gainer,
+  Top Loser, and Most Traded items. Movers require meaningful daily trading
+  volume, so thinly traded noise does not dominate the board.
+- **Scan flips.** Find opportunities using profit, ROI, budget, fill-time,
+  volume, and freshness filters. Each item receives a clear BUY, DECENT,
+  RISKY, or AVOID verdict with an explanation.
+- **Scan alchs.** Switch to Alch View to rank high-alchemy opportunities by
+  profit, ROI, or GP per hour using the same scheduled price snapshot.
+- **Research items.** Search the current market by item name, expand an item
+  for its price details and trade ticket, or run a Deep-Probe Audit.
+- **Use the Watchlist.** Track up to 25 items locally, compare prices and
+  margin now against when you saved them, and audit a saved item directly.
+- **Explore more on the web.** The in-plugin `QUANTSCAPERS.COM` menu links to
+  the market overview, item table, and gear indices. Follow
+  [@Quantscapers on X](https://x.com/Quantscapers) for updates.
 
-## Data source & polling
+## How it works
 
-QuantScapers uses the [RuneScape Wiki real-time prices
-API](https://prices.runescape.wiki/osrs/) — the same public API used by
-other flipping plugins. It polls every 30 seconds while the panel is open,
-and pauses when the panel is closed. Timeseries (deep-probe audit) calls are
-made only when you click Audit, or automatically for Top Picks, capped at 3
-calls per 30 minutes.
+QuantScapers is decision support, not automation.
 
-**Set a contact email in plugin settings.** Every request carries a
-User-Agent identifying this plugin plus your email, so the wiki maintainers
-can reach you specifically if your traffic ever causes an issue. Each
-install should use its own real email — don't leave it blank or copy
-someone else's, since that defeats the point of per-user identification.
+- **Order tickets** provide buy price, sell price, quantity, after-tax profit,
+  and a walk-away timer for you to enter manually.
+- **Trust guards** flag stale quotes, possible price manipulation, and cooling
+  momentum before a candidate is presented as a clean flip.
+- **Deep-Probe Audits** use an item's hourly history to calculate sell-price
+  hit rate and a seven-day margin-stability grade.
+- **Notifications** are optional and can be limited to Flip candidates, Alch
+  candidates, or both.
 
-QuantScapers won't make a single request to the wiki until that email is
-set — the panel shows an explanation instead of data until you do.
+## Data source and responsible use
 
-## No automation
+QuantScapers uses the [OSRS Wiki Real-time Prices API](https://prices.runescape.wiki/osrs/).
 
-This plugin never reads, writes, or interacts with Grand Exchange offers. It
-does not place, edit, or cancel offers on your behalf. Ticket numbers are
-provided for you to enter manually; a copy button puts a number on your
-clipboard, nothing more.
+- It refreshes market data every 30 seconds while the panel is open and pauses
+  when it is closed.
+- It uses only the existing Wiki API endpoints; switching tabs, searching,
+  opening the Watchlist, and using the market overview do not create extra
+  price requests.
+- Deep-Probe Audit calls are on demand or reserved for Top Picks, with the
+  automatic audit budget capped at three calls per 30 minutes.
+- Every request includes a User-Agent with the contact email you configure in
+  RuneLite settings. The plugin makes no API requests until a valid contact
+  email is set.
+
+Your contact email is saved locally and is sent only as part of the Wiki API
+User-Agent. QuantScapers has no telemetry, account system, cloud sync, or
+first-party data collection.
+
+## No Grand Exchange automation
+
+QuantScapers never reads, writes, places, edits, or cancels Grand Exchange
+offers. It does not perform actions for you. Any ticket values are guidance
+for you to enter yourself; copy actions use your clipboard only.
+
+## Development
+
+Run the test suite:
+
+```powershell
+.\gradlew.bat test
+```
 
 ## License
 

@@ -3,6 +3,8 @@ package com.quantscapers.ui;
 import com.quantscapers.QSColors;
 import com.quantscapers.QuantScapersPlugin;
 import com.quantscapers.api.PriceQuote;
+import com.quantscapers.engine.AnalyzedItem;
+import com.quantscapers.engine.AuditResult;
 import com.quantscapers.engine.TrackedTrade;
 import com.quantscapers.ui.util.GpFormat;
 import java.awt.BorderLayout;
@@ -24,7 +26,7 @@ import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.FontManager;
 
 /**
- * Collapsible list of user-tracked ("vaulted") items, each showing the
+ * Collapsible list of user-tracked watchlist items, each showing the
  * snapshot price from when it was tracked next to the current live price.
  * Deliberately styled differently from ItemCardBox (violet accent, no
  * verdict-colored rectangle border) so it doesn't read as just another
@@ -37,6 +39,8 @@ public class VaultBox extends JPanel {
     private boolean collapsed;
     private List<TrackedTrade> lastVault = java.util.Collections.emptyList();
     private Map<Integer, PriceQuote> lastLive = java.util.Collections.emptyMap();
+    private Map<Integer, AuditResult> lastAudits = java.util.Collections.emptyMap();
+    private Map<Integer, AnalyzedItem> lastAnalyzed = java.util.Collections.emptyMap();
 
     public VaultBox(QuantScapersPlugin plugin, ItemManager itemManager) {
         this.plugin = plugin;
@@ -56,9 +60,12 @@ public class VaultBox extends JPanel {
         return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
     }
 
-    public void update(List<TrackedTrade> vault, Map<Integer, PriceQuote> live) {
+    public void update(List<TrackedTrade> vault, Map<Integer, PriceQuote> live,
+                       Map<Integer, AuditResult> audits, Map<Integer, AnalyzedItem> analyzed) {
         lastVault = vault;
         lastLive = live;
+        lastAudits = audits;
+        lastAnalyzed = analyzed;
         removeAll();
         if (vault.isEmpty()) {
             setVisible(false);
@@ -70,7 +77,7 @@ public class VaultBox extends JPanel {
         if (!collapsed) {
             add(Box.createVerticalStrut(6));
             for (TrackedTrade t : vault) {
-                add(row(t, live.get(t.getId())));
+                add(row(t, live.get(t.getId()), audits.get(t.getId()), analyzed.get(t.getId())));
                 add(Box.createVerticalStrut(6));
             }
         }
@@ -80,7 +87,7 @@ public class VaultBox extends JPanel {
     }
 
     private JPanel header(int count) {
-        JLabel title = new JLabel("VAULT (" + count + ")");
+        JLabel title = new JLabel("WATCHLIST (" + count + ")");
         title.setFont(FontManager.getRunescapeBoldFont());
         title.setForeground(QSColors.VIOLET_400);
 
@@ -108,13 +115,13 @@ public class VaultBox extends JPanel {
             public void mouseClicked(MouseEvent e) {
                 collapsed = !collapsed;
                 plugin.getConfig().setVaultCollapsed(collapsed);
-                update(lastVault, lastLive);
+                update(lastVault, lastLive, lastAudits, lastAnalyzed);
             }
         });
         return bar;
     }
 
-    private JPanel row(TrackedTrade t, PriceQuote live) {
+    private JPanel row(TrackedTrade t, PriceQuote live, AuditResult audit, AnalyzedItem analyzed) {
         // Full-width, violet left-accent style deliberately unlike ItemCardBox's
         // verdict-colored rectangle border, so a vaulted entry doesn't read as
         // just another AVOID/RISKY card in the list below it. The accent is a
@@ -146,7 +153,7 @@ public class VaultBox extends JPanel {
 
         JButton untrack = flatButton("✕");
         untrack.setForeground(QSColors.RED_400);
-        untrack.setToolTipText("Remove from vault");
+        untrack.setToolTipText("Remove from watchlist");
         untrack.addActionListener(e -> firePropertyChange("untrack", -1, t.getId()));
 
         JPanel titleRow = new JPanel(new BorderLayout(6, 0));
@@ -178,7 +185,32 @@ public class VaultBox extends JPanel {
         content.add(Box.createVerticalStrut(6));
         content.add(fullWidthLabel("tracked " + agoText(t.getTrackedAtMs()), QSColors.SLATE_500, false));
 
+        if (analyzed != null) {
+            content.add(Box.createVerticalStrut(6));
+            content.add(AuditSummary.build(audit));
+            content.add(Box.createVerticalStrut(4));
+            content.add(auditButton(analyzed, audit));
+        }
+
         return content;
+    }
+
+    /** Uses the exact same user-clicked, capped audit flow as Scanner and Top Picks. */
+    private JButton auditButton(AnalyzedItem item, AuditResult audit) {
+        JButton button = new JButton(audit != null ? "Re-Audit" : "Audit");
+        button.setFont(FontManager.getRunescapeSmallFont());
+        button.setForeground(QSColors.AMBER_400);
+        button.setBorder(new javax.swing.border.LineBorder(QSColors.BORDER_AMBER, 1, true));
+        button.setContentAreaFilled(false);
+        button.setFocusPainted(false);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setAlignmentX(LEFT_ALIGNMENT);
+        button.addActionListener(e -> {
+            button.setEnabled(false);
+            button.setText("Auditing...");
+            plugin.requestAudit(item, () -> firePropertyChange("auditComplete", false, true));
+        });
+        return button;
     }
 
     /**

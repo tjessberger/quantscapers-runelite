@@ -16,6 +16,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 import javax.swing.border.LineBorder;
 import net.runelite.client.ui.FontManager;
 
@@ -34,6 +35,7 @@ public class FilterBar extends JPanel {
     private final JLabel leadsLabel = new JLabel();
     private final JLabel suppressedLabel = new JLabel();
     private final JPanel detailRow;
+    private final JTextField searchField = new JTextField();
 
     // Custom presets tracking
     private final Map<String, CustomPreset> customPresets = new LinkedHashMap<>();
@@ -70,12 +72,39 @@ public class FilterBar extends JPanel {
         viewCombo = new JComboBox<>(QuantScapersConfig.ViewMode.values());
 
         add(row1());
+        add(searchRow());
         add(row2());
         detailRow = row3();
         detailRow.setVisible(false);
         add(detailRow);
 
         syncFromConfig();
+    }
+
+    private JPanel searchRow() {
+        JPanel row = new JPanel(new java.awt.BorderLayout(6, 0));
+        row.setOpaque(false);
+        row.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+
+        JLabel label = new JLabel("Search");
+        label.setFont(FontManager.getRunescapeSmallFont());
+        label.setForeground(QSColors.SLATE_500);
+
+        searchField.setFont(FontManager.getRunescapeSmallFont());
+        searchField.setForeground(QSColors.SLATE_200);
+        searchField.setBackground(QSColors.BG_DEEP);
+        searchField.setBorder(new LineBorder(QSColors.BORDER, 1));
+        searchField.setToolTipText("Filter the current market results by item name. No extra price requests are made.");
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { changed(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { changed(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { changed(); }
+            private void changed() { plugin.setSearchTerm(searchField.getText()); }
+        });
+
+        row.add(label, java.awt.BorderLayout.WEST);
+        row.add(searchField, java.awt.BorderLayout.CENTER);
+        return row;
     }
 
     public void setLeadsCount(int n) {
@@ -192,7 +221,7 @@ public class FilterBar extends JPanel {
     }
 
     private JPanel row2() {
-        JPanel row = new JPanel(new java.awt.BorderLayout());
+        JPanel row = new JPanel(new java.awt.BorderLayout(8, 0));
         row.setOpaque(false);
         row.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
 

@@ -448,10 +448,12 @@ public class ItemCardBox extends JPanel {
         JButton trackButton = flatTextButton(tracked ? "★ Untrack" : "☆ Track", QSColors.AMBER_400);
         trackButton.addActionListener(e -> firePropertyChange("trackToggled", false, true));
 
-        JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JPanel buttonRow = new JPanel();
+        buttonRow.setLayout(new BoxLayout(buttonRow, BoxLayout.X_AXIS));
         buttonRow.setOpaque(false);
         buttonRow.setAlignmentX(LEFT_ALIGNMENT);
         buttonRow.add(auditButton);
+        buttonRow.add(Box.createHorizontalStrut(6));
         buttonRow.add(trackButton);
         box.add(buttonRow);
         box.add(Box.createVerticalStrut(4));
@@ -530,7 +532,9 @@ public class ItemCardBox extends JPanel {
         b.setFont(FontManager.getRunescapeBoldFont());
         b.setForeground(color);
         b.setBorderPainted(true);
-        b.setBorder(new LineBorder(QSColors.BORDER_AMBER, 1, true));
+        b.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(QSColors.BORDER_AMBER, 1, true),
+            BorderFactory.createEmptyBorder(2, 6, 2, 6)));
         b.setContentAreaFilled(false);
         b.setFocusPainted(false);
         return b;

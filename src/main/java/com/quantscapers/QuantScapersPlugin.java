@@ -115,6 +115,8 @@ public class QuantScapersPlugin extends Plugin {
     private final Map<Integer, Long> firstSeenMs = new ConcurrentHashMap<>();
 
     private volatile List<AnalyzedItem> lastAnalyzed = new ArrayList<>();
+    // Local UI state only. Searching never triggers a fetch or changes saved filters.
+    private volatile String searchTerm = "";
     // Raw quotes from the same tick as lastAnalyzed - needed for vault "live" prices
     // since MarketAnalyzer filters out items with no analyzable quote, but the vault
     // still wants to show "no data" for those rather than losing the row.
@@ -227,6 +229,15 @@ public class QuantScapersPlugin extends Plugin {
         return vault.containsKey(itemId);
     }
 
+    /** Updates the local item-name search without adding a market-data request. */
+    public void setSearchTerm(String value) {
+        String next = value == null ? "" : value.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!next.equals(searchTerm)) {
+            searchTerm = next;
+            renderCurrentState();
+        }
+    }
+
     /** Toggles whether confirmed-AVOID entries are shown in the leads list. Session-only. */
     public void setShowSuppressed(boolean show) {
         showSuppressed = show;
@@ -243,6 +254,11 @@ public class QuantScapersPlugin extends Plugin {
 
     public ConfigManager getConfigManager() {
         return configManager;
+    }
+
+    /** Fresh local snapshot for UI rerenders after a user-clicked audit completes. */
+    public Map<Integer, AuditResult> getAuditCacheSnapshot() {
+        return new HashMap<>(auditCache);
     }
 
     @Subscribe
@@ -360,7 +376,7 @@ public class QuantScapersPlugin extends Plugin {
             }
         }
 
-        SwingUtilities.invokeLater(() -> panel.render(display, topPicks, snapshot, vaultSnapshot, vaultLive,
+        SwingUtilities.invokeLater(() -> panel.render(display, topPicks, lastAnalyzed, snapshot, vaultSnapshot, vaultLive,
             totalMatched, result.suppressedCount, showSuppressed, true));
     }
 
@@ -425,7 +441,10 @@ public class QuantScapersPlugin extends Plugin {
         boolean isAlch = config.viewMode() == QuantScapersConfig.ViewMode.ALCH;
 
         List<AnalyzedItem> passesUserFilters = new ArrayList<>();
+        String activeSearch = searchTerm;
         for (AnalyzedItem it : analyzed) {
+            if (!activeSearch.isEmpty()
+                && !it.getName().toLowerCase(java.util.Locale.ROOT).contains(activeSearch)) continue;
             if (it.getFullLimitCost() > maxBuyPrice) continue;
             if (!isAlch && !fillCap.isAny() && it.getEft() > fillCap.minutes()) continue;
             double roi = isAlch ? it.getAlchROI() : it.getRoi();

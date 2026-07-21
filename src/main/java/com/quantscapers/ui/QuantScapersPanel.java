@@ -36,8 +36,8 @@ import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.PluginErrorPanel;
 
 /**
- * Root panel: header, filter bar, top picks, and a scrollable list of item
- * cards. Layout per RUNELITE_PLUGIN_SPEC.md §7.1.
+ * Root panel with a fixed header, website links, and internal navigation.
+ * Market data is rendered into one of three local views; switching views never fetches data.
  */
 public class QuantScapersPanel extends PluginPanel {
 
@@ -46,14 +46,23 @@ public class QuantScapersPanel extends PluginPanel {
 
     private final HeaderBar headerBar;
     private final SiteLinksBar siteLinksBar;
+    private final PluginTabBar tabBar;
     private final FilterBar filterBar;
     private final TopPicksBox topPicksBox;
+    private final MarketMoversBox marketMoversBox;
+    private final MarketPulseBox marketPulseBox;
     private final VaultBox vaultBox;
     private final JPanel errorBanner;
     private final JPanel emailNotice;
+    private final ScrollableListPanel overviewContainer;
+    private final ScrollableListPanel scannerContainer;
+    private final ScrollableListPanel watchlistContainer;
     private final JPanel listContainer;
     private final JPanel allLeadsHeader;
-    private final PluginErrorPanel statePanel;
+    private final PluginErrorPanel overviewState;
+    private final PluginErrorPanel scannerState;
+    private final PluginErrorPanel watchlistState;
+    private final JScrollPane contentScrollPane;
 
     private final Set<Integer> expandedIds = new HashSet<>();
     private final Set<Integer> auditingIds = new HashSet<>();
@@ -62,10 +71,12 @@ public class QuantScapersPanel extends PluginPanel {
     private Map<Integer, AuditResult> lastAuditCache = new HashMap<>();
     private List<AnalyzedItem> lastDisplay = java.util.Collections.emptyList();
     private List<AnalyzedItem> lastTopPicks = java.util.Collections.emptyList();
+    private List<AnalyzedItem> lastMarket = java.util.Collections.emptyList();
     private List<TrackedTrade> lastVault = java.util.Collections.emptyList();
     private Map<Integer, PriceQuote> lastVaultLive = new HashMap<>();
     private int lastTotalMatched = 0;
     private boolean gateShown = false;
+    private PluginTabBar.Tab selectedTab = PluginTabBar.Tab.OVERVIEW;
 
     private Timer countdownTimer;
     private int countdown = Constants.HEARTBEAT_SECONDS;
@@ -80,67 +91,70 @@ public class QuantScapersPanel extends PluginPanel {
 
         headerBar = new HeaderBar(this::onManualRefresh);
         siteLinksBar = new SiteLinksBar();
+        tabBar = new PluginTabBar(this::showTab);
         filterBar = new FilterBar(plugin);
         topPicksBox = new TopPicksBox(plugin);
-        topPicksBox.addPropertyChangeListener("auditComplete", e -> rerenderFromCache());
+        topPicksBox.addPropertyChangeListener("auditComplete", e -> refreshAuditsAndRerender());
+        marketMoversBox = new MarketMoversBox();
+        marketPulseBox = new MarketPulseBox();
 
         vaultBox = new VaultBox(plugin, itemManager);
         vaultBox.addPropertyChangeListener("untrack", e -> plugin.untrack((Integer) e.getNewValue()));
+        vaultBox.addPropertyChangeListener("auditComplete", e -> refreshAuditsAndRerender());
 
         errorBanner = buildErrorBanner();
         errorBanner.setVisible(false);
-
         emailNotice = buildEmailNotice();
         refreshEmailNotice();
+
+        overviewContainer = contentPanel();
+        scannerContainer = contentPanel();
+        watchlistContainer = contentPanel();
+        listContainer = contentPanel();
+        allLeadsHeader = buildAllLeadsHeader();
+
+        overviewState = statePanel();
+        scannerState = statePanel();
+        watchlistState = statePanel();
+        overviewState.setContent("QUANTSCAPERS", "Syncing market data...");
+        scannerState.setContent("QUANTSCAPERS", "Syncing market data...");
+        watchlistState.setContent("WATCHLIST", "Track an item from Scanner to monitor it here.");
+
+        overviewContainer.add(marketPulseBox);
+        overviewContainer.add(topPicksBox);
+        overviewContainer.add(marketMoversBox);
+        overviewContainer.add(overviewState);
+
+        scannerContainer.add(filterBar);
+        scannerContainer.add(Box.createVerticalStrut(4));
+        scannerContainer.add(listContainer);
+        // BoxLayout positions siblings around their alignment points. FilterBar's
+        // default center alignment previously pushed the left-aligned card list
+        // halfway across the panel even though both components allowed full width.
+        alignLeft(scannerContainer);
+
+        watchlistContainer.add(vaultBox);
+        watchlistContainer.add(watchlistState);
 
         JPanel north = new JPanel();
         north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
         north.setOpaque(false);
         north.add(headerBar);
         north.add(siteLinksBar);
+        north.add(tabBar);
         north.add(emailNotice);
-        north.add(filterBar);
         north.add(errorBanner);
-        north.add(topPicksBox);
-        north.add(vaultBox);
-        // A vertical BoxLayout with MIXED child alignmentX values lines the children up
-        // by their alignment points, not their edges - one default-CENTER sibling is
-        // enough to shove every LEFT-aligned child's left edge to mid-panel. Normalize
-        // here, in one place, so no individual section has to remember to opt in.
-        for (java.awt.Component c : north.getComponents()) {
-            if (c instanceof JComponent) {
-                ((JComponent) c).setAlignmentX(LEFT_ALIGNMENT);
-            }
-        }
+        alignLeft(north);
 
-        // Plain JPanel isn't Scrollable, so JViewport sizes it to its own preferred
-        // width - meaning any unconstrained child anywhere in the card tree (a long
-        // item name, a wide stats row, whatever comes next) can silently inflate the
-        // whole list wider than the visible panel. With the horizontal scrollbar
-        // disabled by design, that excess just gets clipped off the right edge
-        // instead of showing a scrollbar, which read as a "bleeding" border. Forcing
-        // getScrollableTracksViewportWidth() true pins the list - and therefore every
-        // card - to the real visible width no matter what a child asks for.
-        listContainer = new ScrollableListPanel();
-        listContainer.setLayout(new BoxLayout(listContainer, BoxLayout.Y_AXIS));
-        listContainer.setOpaque(false);
-
-        allLeadsHeader = buildAllLeadsHeader();
-
-        statePanel = new PluginErrorPanel();
-        statePanel.setContent("QUANTSCAPERS", "Syncing market data...");
-
-        JScrollPane scrollPane = new JScrollPane(listContainer);
-        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        scrollPane.setOpaque(false);
-        scrollPane.getViewport().setOpaque(false);
+        contentScrollPane = new JScrollPane(overviewContainer);
+        contentScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        contentScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        contentScrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        contentScrollPane.setOpaque(false);
+        contentScrollPane.getViewport().setOpaque(false);
 
         add(north, BorderLayout.NORTH);
-        add(scrollPane, BorderLayout.CENTER);
-
-        listContainer.add(statePanel);
+        add(contentScrollPane, BorderLayout.CENTER);
     }
 
     @Override
@@ -184,8 +198,18 @@ public class QuantScapersPanel extends PluginPanel {
         plugin.requestImmediateRefresh();
     }
 
+    private void showTab(PluginTabBar.Tab tab) {
+        selectedTab = tab;
+        tabBar.setSelected(tab);
+        contentScrollPane.setViewportView(tab == PluginTabBar.Tab.OVERVIEW ? overviewContainer
+            : tab == PluginTabBar.Tab.SCANNER ? scannerContainer : watchlistContainer);
+        contentScrollPane.getViewport().setViewPosition(new java.awt.Point(0, 0));
+        revalidate();
+        repaint();
+    }
+
     /** Called on the EDT by the plugin after every successful analysis tick. */
-    public void render(List<AnalyzedItem> display, List<AnalyzedItem> topPicks,
+    public void render(List<AnalyzedItem> display, List<AnalyzedItem> topPicks, List<AnalyzedItem> market,
                         Map<Integer, AuditResult> auditCache, List<TrackedTrade> vault,
                         Map<Integer, PriceQuote> vaultLive, int totalMatched,
                         int suppressedCount, boolean showSuppressed, boolean syncOk) {
@@ -196,10 +220,12 @@ public class QuantScapersPanel extends PluginPanel {
         filterBar.syncFromConfig();
         lastDisplay = display;
         lastTopPicks = topPicks;
+        lastMarket = market;
         lastAuditCache = auditCache;
         lastVault = vault;
         lastVaultLive = vaultLive;
         lastTotalMatched = totalMatched;
+        marketPulseBox.update(market);
         filterBar.setSuppressedInfo(suppressedCount, showSuppressed);
         errorBanner.setVisible(!syncOk);
         refreshEmailNotice();
@@ -210,43 +236,61 @@ public class QuantScapersPanel extends PluginPanel {
         errorBanner.setVisible(true);
     }
 
-    /**
-     * Called on the EDT whenever a tick finds no contact email set. No wiki request has
-     * been made for this tick — filters/top picks/errors are hidden since there's no data
-     * behind them, and the list area explains why instead of showing a fake "syncing" state.
-     * Guarded so it only rebuilds once per gated stretch instead of every 30s tick.
-     */
+    /** Called when no valid contact email is configured; no API request has occurred. */
     public void showEmailGate() {
         if (gateShown) {
             return;
         }
         gateShown = true;
-
         filterBar.setVisible(false);
+        marketPulseBox.setVisible(false);
         topPicksBox.setVisible(false);
         vaultBox.setVisible(false);
         errorBanner.setVisible(false);
-        refreshEmailNotice(); // stays visible here - it's where the "Why?" popover lives
+        refreshEmailNotice();
 
+        overviewState.setContent("Valid contact email required", "No data until you enter a real email address above.");
+        overviewState.setVisible(true);
+        scannerState.setContent("Valid contact email required", "No data until you enter a real email address above.");
         listContainer.removeAll();
-        liveCards.clear();
-        statePanel.setContent("Valid contact email required", "No data until you enter a real email address above.");
-        listContainer.add(statePanel);
+        listContainer.add(scannerState);
+        watchlistState.setContent("Valid contact email required", "No tracked-item data until you enter an email above.");
+        watchlistState.setVisible(true);
+        tabBar.setWatchlistCount(0);
         revalidate();
         repaint();
     }
 
     private void rerenderFromCache() {
-        int scrollValue = 0;
-        java.awt.Container parent = listContainer.getParent();
-        if (parent instanceof javax.swing.JViewport) {
-            scrollValue = ((javax.swing.JViewport) parent).getViewPosition().y;
-        }
+        int scannerScroll = selectedTab == PluginTabBar.Tab.SCANNER
+            ? contentScrollPane.getViewport().getViewPosition().y : 0;
 
         filterBar.setLeadsCount(lastTotalMatched);
         topPicksBox.update(lastTopPicks, lastAuditCache);
-        vaultBox.update(lastVault, lastVaultLive);
+        marketMoversBox.update(lastMarket);
+        vaultBox.update(lastVault, lastVaultLive, lastAuditCache, analyzedById(lastMarket));
+        tabBar.setWatchlistCount(lastVault.size());
+        overviewState.setVisible(!marketPulseBox.isVisible() && !topPicksBox.isVisible() && !marketMoversBox.isVisible());
+        if (overviewState.isVisible()) {
+            overviewState.setContent("No market briefing yet", "Market data will appear after the next successful refresh.");
+        }
+        watchlistState.setVisible(lastVault.isEmpty());
+        if (watchlistState.isVisible()) {
+            watchlistState.setContent("WATCHLIST", "Track an item from Scanner to monitor it here.");
+        }
 
+        renderScannerList();
+        revalidate();
+        repaint();
+
+        if (selectedTab == PluginTabBar.Tab.SCANNER) {
+            javax.swing.SwingUtilities.invokeLater(() -> contentScrollPane.getViewport().setViewPosition(
+                new java.awt.Point(0, Math.min(scannerScroll,
+                    Math.max(0, scannerContainer.getHeight() - contentScrollPane.getViewport().getHeight())))));
+        }
+    }
+
+    private void renderScannerList() {
         Set<Integer> trackedIds = new HashSet<>();
         for (TrackedTrade t : lastVault) {
             trackedIds.add(t.getId());
@@ -254,64 +298,52 @@ public class QuantScapersPanel extends PluginPanel {
 
         listContainer.removeAll();
         liveCards.clear();
-
         if (lastDisplay.isEmpty()) {
-            statePanel.setContent("No unicorns detected",
-                "Loosen Budget, Profit, ROI or Fill Time to see leads.");
-            listContainer.add(statePanel);
-        } else {
-            // A Top Pick also appearing as the first main-list card reads as a
-            // duplication glitch without this - it's intentional (a highlight
-            // strip of the same leads listed in full below), just needs a label.
-            if (topPicksBox.isVisible()) {
-                listContainer.add(allLeadsHeader);
-                listContainer.add(Box.createVerticalStrut(4));
-            }
-            for (AnalyzedItem item : lastDisplay) {
-                boolean expanded = expandedIds.contains(item.getId());
-                boolean auditing = auditingIds.contains(item.getId());
-                boolean tracked = trackedIds.contains(item.getId());
-                ItemCardBox card = new ItemCardBox(plugin, itemManager, item, lastAuditCache.get(item.getId()),
-                    expanded, auditing, tracked, isExpanded -> {
-                        if (isExpanded) expandedIds.add(item.getId());
-                        else expandedIds.remove(item.getId());
-                    });
-                card.addPropertyChangeListener("auditStarted", e -> {
-                    auditingIds.add(item.getId());
-                    rerenderFromCache();
-                });
-                card.addPropertyChangeListener("auditComplete", e -> {
-                    auditingIds.remove(item.getId());
-                    rerenderFromCache();
-                });
-                // The plugin's own renderCurrentState() after the mutation delivers the
-                // authoritative refresh (fresh vault snapshot) - rerendering locally here
-                // would render against a stale lastVault.
-                card.addPropertyChangeListener("trackToggled", e -> plugin.toggleTrack(item));
-                liveCards.add(card);
-                listContainer.add(card);
-                listContainer.add(Box.createVerticalStrut(6));
-            }
+            scannerState.setContent("No unicorns detected", "Loosen Budget, Profit, ROI or Fill Time to see leads.");
+            listContainer.add(scannerState);
+            return;
         }
 
-        revalidate();
-        repaint();
+        listContainer.add(allLeadsHeader);
+        listContainer.add(Box.createVerticalStrut(4));
+        for (AnalyzedItem item : lastDisplay) {
+            boolean expanded = expandedIds.contains(item.getId());
+            boolean auditing = auditingIds.contains(item.getId());
+            boolean tracked = trackedIds.contains(item.getId());
+            ItemCardBox card = new ItemCardBox(plugin, itemManager, item, lastAuditCache.get(item.getId()),
+                expanded, auditing, tracked, isExpanded -> {
+                    if (isExpanded) expandedIds.add(item.getId());
+                    else expandedIds.remove(item.getId());
+                });
+            card.addPropertyChangeListener("auditStarted", e -> {
+                auditingIds.add(item.getId());
+                rerenderFromCache();
+            });
+            card.addPropertyChangeListener("auditComplete", e -> {
+                auditingIds.remove(item.getId());
+                refreshAuditsAndRerender();
+            });
+            card.addPropertyChangeListener("trackToggled", e -> plugin.toggleTrack(item));
+            liveCards.add(card);
+            listContainer.add(card);
+            listContainer.add(Box.createVerticalStrut(6));
+        }
+    }
 
-        int finalScroll = scrollValue;
-        javax.swing.SwingUtilities.invokeLater(() -> {
-            if (listContainer.getParent() instanceof javax.swing.JViewport) {
-                javax.swing.JViewport vp = (javax.swing.JViewport) listContainer.getParent();
-                vp.setViewPosition(new java.awt.Point(0, Math.min(finalScroll,
-                    Math.max(0, listContainer.getHeight() - vp.getHeight()))));
-            }
-        });
+    private static Map<Integer, AnalyzedItem> analyzedById(List<AnalyzedItem> market) {
+        Map<Integer, AnalyzedItem> byId = new HashMap<>();
+        for (AnalyzedItem item : market) {
+            byId.put(item.getId(), item);
+        }
+        return byId;
+    }
+
+    private void refreshAuditsAndRerender() {
+        lastAuditCache = plugin.getAuditCacheSnapshot();
+        rerenderFromCache();
     }
 
     private void refreshEmailNotice() {
-        // Same plausibility check as QuantScapersPlugin#isGated() - previously this
-        // only checked non-empty, so typing "x" made the "set a contact email"
-        // banner disappear while the gate screen (which does check format) stayed up,
-        // a contradictory UI with no clue what was actually wrong.
         emailNotice.setVisible(!Constants.isPlausibleEmail(plugin.getConfig().contactEmail()));
     }
 
@@ -320,8 +352,7 @@ public class QuantScapersPanel extends PluginPanel {
         banner.setBackground(new java.awt.Color(0xf5, 0x9e, 0x0b, 25));
         banner.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
 
-        JLabel label = new JLabel(
-            "<html><body style='width:130px'>Set a contact email in plugin settings.</body></html>");
+        JLabel label = new JLabel("<html><body style='width:130px'>Set a contact email in plugin settings.</body></html>");
         label.setForeground(QSColors.AMBER_400);
         label.setFont(FontManager.getRunescapeSmallFont());
 
@@ -330,10 +361,7 @@ public class QuantScapersPanel extends PluginPanel {
         why.setFont(FontManager.getRunescapeSmallFont());
         why.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         why.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                showWhyPopover(why);
-            }
+            @Override public void mouseClicked(MouseEvent e) { showWhyPopover(why); }
         });
 
         banner.add(label, BorderLayout.CENTER);
@@ -341,17 +369,13 @@ public class QuantScapersPanel extends PluginPanel {
         return banner;
     }
 
-    /** Popover with the full explanation, kept out of the compact banner so it doesn't crowd the sidebar. */
     private void showWhyPopover(JComponent anchor) {
-        JLabel content = new JLabel(
-            "<html><body style='width:190px'>Saved locally and sent only to the Wiki Prices "
-                + "API, as part of the User-Agent on every price request &mdash; nowhere else, "
-                + "no telemetry, nothing collected by this plugin."
-                + "<br><br>"
-                + "It's what keeps QuantScapers compliant with the wiki's usage rules, since "
-                + "every install should be individually identifiable rather than anonymous "
-                + "instead of everyone sharing one address."
-                + "</body></html>");
+        JLabel content = new JLabel("<html><body style='width:190px'>Saved locally and sent only to the Wiki Prices "
+            + "API, as part of the User-Agent on every price request &mdash; nowhere else, "
+            + "no telemetry, nothing collected by this plugin."
+            + "<br><br>It's what keeps QuantScapers compliant with the wiki's usage rules, since "
+            + "every install should be individually identifiable rather than anonymous "
+            + "instead of everyone sharing one address.</body></html>");
         content.setForeground(QSColors.SLATE_200);
         content.setFont(FontManager.getRunescapeSmallFont());
         content.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
@@ -384,7 +408,7 @@ public class QuantScapersPanel extends PluginPanel {
 
         JPanel accent = new JPanel();
         accent.setBackground(QSColors.AMBER_500);
-        accent.setPreferredSize(new java.awt.Dimension(3, 1));
+        accent.setPreferredSize(new Dimension(3, 1));
 
         JPanel bar = new JPanel(new BorderLayout(6, 0));
         bar.setOpaque(false);
@@ -398,39 +422,42 @@ public class QuantScapersPanel extends PluginPanel {
         JPanel banner = new JPanel(new BorderLayout());
         banner.setBackground(new java.awt.Color(0xef, 0x44, 0x44, 25));
         banner.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
-        javax.swing.JLabel label = new javax.swing.JLabel("Market sync failed - retrying next cycle.");
-        label.setForeground(com.quantscapers.QSColors.RED_400);
-        label.setFont(net.runelite.client.ui.FontManager.getRunescapeSmallFont());
+        JLabel label = new JLabel("Market sync failed - retrying next cycle.");
+        label.setForeground(QSColors.RED_400);
+        label.setFont(FontManager.getRunescapeSmallFont());
         banner.add(label, BorderLayout.CENTER);
         return banner;
     }
 
-    // Pins the list to the viewport's actual width (see the comment where this is
-    // constructed) so no child row can silently push the card wider than what's visible.
+    private static ScrollableListPanel contentPanel() {
+        ScrollableListPanel panel = new ScrollableListPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setOpaque(false);
+        panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
+        panel.setAlignmentX(LEFT_ALIGNMENT);
+        return panel;
+    }
+
+    private static PluginErrorPanel statePanel() {
+        PluginErrorPanel panel = new PluginErrorPanel();
+        panel.setAlignmentX(LEFT_ALIGNMENT);
+        return panel;
+    }
+
+    private static void alignLeft(JPanel panel) {
+        for (java.awt.Component component : panel.getComponents()) {
+            if (component instanceof JComponent) {
+                ((JComponent) component).setAlignmentX(LEFT_ALIGNMENT);
+            }
+        }
+    }
+
     private static final class ScrollableListPanel extends JPanel implements Scrollable {
-        @Override
-        public Dimension getPreferredScrollableViewportSize() {
-            return getPreferredSize();
-        }
-
-        @Override
-        public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
-            return 16;
-        }
-
-        @Override
-        public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
-            return visibleRect.height;
-        }
-
-        @Override
-        public boolean getScrollableTracksViewportWidth() {
-            return true;
-        }
-
-        @Override
-        public boolean getScrollableTracksViewportHeight() {
-            return false;
-        }
+        @Override public Dimension getMaximumSize() { return new Dimension(Integer.MAX_VALUE, getPreferredSize().height); }
+        @Override public Dimension getPreferredScrollableViewportSize() { return getPreferredSize(); }
+        @Override public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) { return 16; }
+        @Override public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) { return visibleRect.height; }
+        @Override public boolean getScrollableTracksViewportWidth() { return true; }
+        @Override public boolean getScrollableTracksViewportHeight() { return false; }
     }
 }
