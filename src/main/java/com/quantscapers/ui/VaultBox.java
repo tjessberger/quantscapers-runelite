@@ -4,6 +4,7 @@ import com.quantscapers.QSColors;
 import com.quantscapers.QuantScapersPlugin;
 import com.quantscapers.api.PriceQuote;
 import com.quantscapers.engine.AnalyzedItem;
+import com.quantscapers.engine.Constants;
 import com.quantscapers.engine.AuditResult;
 import com.quantscapers.engine.TrackedTrade;
 import com.quantscapers.ui.util.GpFormat;
@@ -172,18 +173,18 @@ public class VaultBox extends JPanel {
         if (live != null && live.getHigh() != null && live.getLow() != null) {
             content.add(priceBlock("NOW", live.getLow(), live.getHigh()));
 
-            int marginNow = live.getHigh() - live.getLow(); // tax on current sell not modeled - directional delta only
+            int marginNow = live.getHigh() - live.getLow() - Constants.geTax(live.getHigh());
             long delta = marginNow - marginThen;
             content.add(Box.createVerticalStrut(6));
             content.add(fullWidthLabel(
-                (delta >= 0 ? "▲ +" : "▼ ") + GpFormat.format(delta) + " margin since tracked",
+                (delta >= 0 ? "▲ +" : "▼ ") + GpFormat.format(delta) + " margin change",
                 delta >= 0 ? QSColors.EMERALD_400 : QSColors.RED_400, true));
         } else {
-            content.add(fullWidthLabel("NOW · no live data for this item", QSColors.SLATE_500, false));
+            content.add(fullWidthLabel("NOW · no live data", QSColors.SLATE_500, false));
         }
 
         content.add(Box.createVerticalStrut(6));
-        content.add(fullWidthLabel("tracked " + agoText(t.getTrackedAtMs()), QSColors.SLATE_500, false));
+        content.add(fullWidthLabel("Saved " + agoText(t.getTrackedAtMs()), QSColors.SLATE_500, false));
 
         if (analyzed != null) {
             content.add(Box.createVerticalStrut(6));
@@ -197,7 +198,7 @@ public class VaultBox extends JPanel {
 
     /** Uses the exact same user-clicked, capped audit flow as Scanner and Top Picks. */
     private JButton auditButton(AnalyzedItem item, AuditResult audit) {
-        JButton button = new JButton(audit != null ? "Re-Audit" : "Audit");
+        JButton button = new JButton(audit != null ? "Audit again" : "Run audit");
         button.setFont(FontManager.getRunescapeSmallFont());
         button.setForeground(QSColors.AMBER_400);
         button.setBorder(new javax.swing.border.LineBorder(QSColors.BORDER_AMBER, 1, true));

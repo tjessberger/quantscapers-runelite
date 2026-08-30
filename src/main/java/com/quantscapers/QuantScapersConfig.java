@@ -85,7 +85,7 @@ public interface QuantScapersConfig extends Config {
     }
 
     enum ViewMode {
-        FLIP("Flip View"), ALCH("Alch View");
+        FLIP("Trade View"), ALCH("Alch View");
 
         private final String label;
 
@@ -107,7 +107,7 @@ public interface QuantScapersConfig extends Config {
     }
 
     enum NotificationViewMode {
-        FLIP("Flips Only"), ALCH("Alch Only"), BOTH("Both");
+        FLIP("Trades Only"), ALCH("Alch Only"), BOTH("Both");
 
         private final String label;
 
@@ -119,16 +119,14 @@ public interface QuantScapersConfig extends Config {
 
 
     @ConfigItem(
-        keyName = "contactEmail",
-        name = "Contact email",
-        description = "Saved locally and sent only to the Wiki Prices API, as part of the "
-            + "User-Agent on every price request - nowhere else, no telemetry, nothing collected "
-            + "by this plugin. It's what keeps QuantScapers compliant with the wiki's usage rules, "
-            + "since every install should be individually identifiable rather than anonymous. "
-            + "Use your own email - don't leave this blank or copy someone else's.",
+        keyName = "enableWikiMarketData",
+        name = "Enable Wiki market data",
+        description = "Downloads Grand Exchange market snapshots from the OSRS Wiki Prices API. "
+            + "No RuneScape account, player, Grand Exchange offer, or telemetry data is sent.",
+        warning = "This feature submits your IP address to a 3rd-party server not controlled or verified by RuneLite developers",
         position = 0
     )
-    default String contactEmail() { return ""; }
+    default boolean enableWikiMarketData() { return false; }
 
     @ConfigItem(
         keyName = "maxBuyPrice",
@@ -173,7 +171,7 @@ public interface QuantScapersConfig extends Config {
     @ConfigItem(
         keyName = "viewMode",
         name = "View mode",
-        description = "Switch between Flip view and Alch view.",
+        description = "Switch between trade-opportunity and Alch views.",
         position = 6
     )
     default ViewMode viewMode() { return ViewMode.FLIP; }
@@ -213,7 +211,7 @@ public interface QuantScapersConfig extends Config {
     @ConfigItem(
         keyName = "notificationViewMode",
         name = "Notification view mode",
-        description = "Trigger notifications for Flips, Alch targets, or Both.",
+        description = "Trigger notifications for trade opportunities, Alch targets, or Both.",
         position = 11
     )
     default NotificationViewMode notificationViewMode() { return NotificationViewMode.BOTH; }

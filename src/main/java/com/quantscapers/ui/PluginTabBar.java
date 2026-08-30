@@ -13,7 +13,7 @@ import net.runelite.client.ui.FontManager;
 public class PluginTabBar extends JPanel {
     public enum Tab { OVERVIEW, SCANNER, WATCHLIST }
 
-    private final JButton overview = button("OVERVIEW", "Market Pulse and Top Picks");
+    private final JButton overview = button("OVERVIEW", "Market Intelligence and Top Picks");
     private final JButton scanner = button("SCANNER", "Search and scan market opportunities");
     private final JButton watchlist = button("WATCHLIST", "Tracked items and price changes");
     private Tab selected = Tab.OVERVIEW;

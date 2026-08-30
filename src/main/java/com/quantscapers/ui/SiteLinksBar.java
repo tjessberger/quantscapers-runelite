@@ -3,9 +3,7 @@ package com.quantscapers.ui;
 import com.quantscapers.QSColors;
 import java.awt.BorderLayout;
 import java.awt.Cursor;
-import java.awt.Desktop;
 import java.awt.Dimension;
-import java.net.URI;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JMenuItem;
@@ -13,6 +11,7 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.border.LineBorder;
 import net.runelite.client.ui.FontManager;
+import net.runelite.client.util.LinkBrowser;
 
 /** Always-visible external links, separated from the plugin's internal tabs. */
 public class SiteLinksBar extends JPanel {
@@ -23,10 +22,10 @@ public class SiteLinksBar extends JPanel {
         setOpaque(false);
         setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
 
-        JButton website = actionButton("QUANTSCAPERS.COM  ▾", "Open QuantScapers website destinations");
+        JButton website = actionButton("QUANTSCAPERS.COM  ▾", "Open QuantScapers.com links");
         website.addActionListener(e -> websiteMenu().show(website, 0, website.getHeight() + 2));
 
-        JButton social = actionButton("X @Quantscapers", "Follow @Quantscapers on X");
+        JButton social = actionButton("X @Quantscapers", "Open @Quantscapers on X");
         social.setPreferredSize(new Dimension(96, 24));
         social.addActionListener(e -> open("https://x.com/Quantscapers"));
 
@@ -67,10 +66,6 @@ public class SiteLinksBar extends JPanel {
     }
 
     private static void open(String url) {
-        try {
-            Desktop.getDesktop().browse(new URI(url));
-        } catch (Exception ignored) {
-            // Opening external links is best-effort and must never interrupt the plugin.
-        }
+        LinkBrowser.browse(url);
     }
 }

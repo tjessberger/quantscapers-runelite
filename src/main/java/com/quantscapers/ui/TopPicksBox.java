@@ -20,7 +20,7 @@ import javax.swing.JPanel;
 import javax.swing.border.LineBorder;
 import net.runelite.client.ui.FontManager;
 
-/** Top-3 flips ranked by GP/hour, auto-audited. Hidden entirely when empty. */
+/** Top three trade candidates ranked by GP/hour, auto-audited. Hidden when empty. */
 public class TopPicksBox extends JPanel {
 
     private final QuantScapersPlugin plugin;
@@ -40,11 +40,11 @@ public class TopPicksBox extends JPanel {
             return;
         }
 
-        JLabel title = new JLabel("TOP PICKS");
+        JLabel title = new JLabel("TRADE CANDIDATES");
         title.setFont(FontManager.getRunescapeBoldFont());
         title.setForeground(QSColors.EMERALD_400);
         title.setAlignmentX(LEFT_ALIGNMENT);
-        JLabel subtitle = new JLabel("fresh · trap-checked · by GP/hr");
+        JLabel subtitle = new JLabel("Fresh quotes with spread checks");
         subtitle.setFont(FontManager.getRunescapeSmallFont());
         subtitle.setForeground(QSColors.SLATE_500);
         subtitle.setAlignmentX(LEFT_ALIGNMENT);
@@ -88,7 +88,7 @@ public class TopPicksBox extends JPanel {
         // Full name, wrapped rather than hard-clipped — a name silently cut off mid-word
         // reads as broken, not just abbreviated. Width leaves room for gpHr sharing the row.
         JLabel name = new JLabel("<html><body style='width:" + (UiConstants.CARD_TEXT_WIDTH_PX - 50)
-            + "px'>" + item.getName() + "</body></html>");
+            + "px'>" + escape(item.getName()) + "</body></html>");
         name.setFont(FontManager.getRunescapeBoldFont());
         name.setForeground(QSColors.SLATE_200);
         JLabel gpHr = new JLabel(GpFormat.format(Math.round(item.getGpHour())) + "/hr");
@@ -111,7 +111,7 @@ public class TopPicksBox extends JPanel {
         row.add(AuditSummary.build(hist));
         row.add(Box.createVerticalStrut(2));
 
-        JButton auditBtn = new JButton(hist != null ? "Re-Audit" : "Audit");
+        JButton auditBtn = new JButton(hist != null ? "Audit again" : "Run audit");
         auditBtn.setFont(FontManager.getRunescapeSmallFont());
         auditBtn.setForeground(QSColors.AMBER_400);
         auditBtn.setBorder(new LineBorder(QSColors.BORDER_AMBER, 1, true));
@@ -131,10 +131,14 @@ public class TopPicksBox extends JPanel {
 
     private static JLabel wrapped(String text, java.awt.Color color) {
         JLabel l = new JLabel("<html><body style='width:" + UiConstants.CARD_TEXT_WIDTH_PX + "px'>"
-            + text + "</body></html>");
+            + escape(text) + "</body></html>");
         l.setFont(FontManager.getRunescapeSmallFont());
         l.setForeground(color);
         l.setAlignmentX(LEFT_ALIGNMENT);
         return l;
+    }
+
+    private static String escape(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 }

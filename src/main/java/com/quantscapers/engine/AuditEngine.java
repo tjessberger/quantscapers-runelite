@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Deep-probe audit: hit rate against 1h timeseries history plus a 7-day
+ * Price history audit: hit rate against 1h timeseries history plus a 7-day
  * margin-stability grade. Direct transcription of verifyNode() in
  * engine.html. Pure function — network fetch happens elsewhere; on fetch
  * failure the caller should use {@link #failed(long)} instead of calling
@@ -36,13 +36,13 @@ public final class AuditEngine {
 
         String verdict;
         if (hits1d >= 8 && trend > 0.5) {
-            verdict = "Strong Move";
+            verdict = "Strong move";
         } else if (trend < -1.5) {
             verdict = "Slipping";
         } else if (hits1d == 0 && hits7d > 2) {
-            verdict = "Peak/Stagnant";
+            verdict = "Peak or stagnant";
         } else if (hits1d > 15) {
-            verdict = "Hyper Active";
+            verdict = "Highly active";
         } else {
             verdict = "Stable";
         }
@@ -98,7 +98,7 @@ public final class AuditEngine {
     public static AuditResult failed(long nowMs) {
         return AuditResult.builder()
             .ts(nowMs)
-            .verdict("Audit Failed")
+            .verdict("Audit failed")
             .likelihood(0)
             .hits1d(0)
             .hits7d(0)

@@ -21,7 +21,7 @@ public final class VaultPruner {
             return false;
         }
         long nowSec = nowMs / 1000;
-        long age = Math.min(nowSec - q.getHighTime(), nowSec - q.getLowTime());
+        long age = Math.max(0, Math.min(nowSec - q.getHighTime(), nowSec - q.getLowTime()));
         return age <= Constants.QUOTE_STALE_SEC;
     }
 

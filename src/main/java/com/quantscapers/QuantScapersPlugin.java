@@ -20,6 +20,8 @@ import com.quantscapers.engine.VaultPruner;
 import com.quantscapers.engine.Verdict;
 import com.quantscapers.engine.VerdictEngine;
 import com.quantscapers.ui.QuantScapersPanel;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -39,16 +41,21 @@ import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
+import net.runelite.api.MenuAction;
 import net.runelite.client.Notifier;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.OverlayMenuClicked;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.ui.overlay.Overlay;
+import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.util.ImageUtil;
 import com.quantscapers.ui.util.GpFormat;
 import okhttp3.OkHttpClient;
@@ -56,8 +63,8 @@ import okhttp3.OkHttpClient;
 @Slf4j
 @PluginDescriptor(
     name = "QuantScapers",
-    description = "OSRS economy toolset for market awareness, scanning, research, audits, and watchlists",
-    tags = {"grand", "exchange", "economy", "market", "flipping", "alchemy", "prices", "money", "watchlist"}
+    description = "OSRS Market Intelligence tool with opportunity scanning, item research, price audits, and a local watchlist",
+    tags = {"grand", "exchange", "economy", "market", "intelligence", "alchemy", "prices", "money", "watchlist"}
 )
 public class QuantScapersPlugin extends Plugin {
 
@@ -71,6 +78,7 @@ public class QuantScapersPlugin extends Plugin {
     @Inject private Client runeliteClient;
     @Inject private ClientThread clientThread;
     @Inject private Notifier notifier;
+    @Inject private EventBus eventBus;
 
     // Notification state tracking. Session-only (never persisted).
     private final Set<Integer> matchingNotificationIds = ConcurrentHashMap.newKeySet();
@@ -122,14 +130,13 @@ public class QuantScapersPlugin extends Plugin {
     // still wants to show "no data" for those rather than losing the row.
     private volatile Map<Integer, PriceQuote> lastLatest = new HashMap<>();
     private volatile long lastAnalysisMs = 0;
-    private static final long PAUSE_GRACE_MS = 600_000; // 10 minutes
     // Below this age, any trigger (manual refresh, panel re-open, config event)
     // re-renders from the last analysis instead of refetching from the wiki.
     private static final long FRESH_ENOUGH_MS = 10_000; // 10 seconds
 
     @Override
     protected void startUp() {
-        client = new WikiPricesClient(okHttpClient, gson, () -> Constants.buildUserAgent(config.contactEmail()));
+        client = new WikiPricesClient(okHttpClient, gson);
         panel = new QuantScapersPanel(this, itemManager);
         loadPersistedAuditCache();
         loadPersistedVault();
@@ -165,10 +172,10 @@ public class QuantScapersPlugin extends Plugin {
         executor.execute(this::tick);
     }
 
-    /** Runs a deep-probe audit for one item, off the auto-audit budget. onComplete fires on the EDT. */
+    /** Runs a price history audit for one item, off the auto-audit budget. onComplete fires on the EDT. */
     public void requestAudit(AnalyzedItem item, Runnable onComplete) {
         executor.execute(() -> {
-            if (!isGated() && tryConsumeManualAuditBudget()) {
+            if (!isWikiDataDisabled() && tryConsumeManualAuditBudget()) {
                 auditItemBlocking(item);
             }
             SwingUtilities.invokeLater(onComplete);
@@ -256,6 +263,24 @@ public class QuantScapersPlugin extends Plugin {
         return configManager;
     }
 
+    /** Opens RuneLite's configuration panel directly on QuantScapers. */
+    public void openSettings() {
+        OverlayMenuEntry configure = new OverlayMenuEntry(
+            MenuAction.RUNELITE_OVERLAY_CONFIG, "Configure", "QuantScapers");
+        eventBus.post(new OverlayMenuClicked(configure, new SettingsLinkOverlay(this)));
+    }
+
+    private static final class SettingsLinkOverlay extends Overlay {
+        private SettingsLinkOverlay(QuantScapersPlugin plugin) {
+            super(plugin);
+        }
+
+        @Override
+        public Dimension render(Graphics2D graphics) {
+            return null;
+        }
+    }
+
     /** Fresh local snapshot for UI rerenders after a user-clicked audit completes. */
     public Map<Integer, AuditResult> getAuditCacheSnapshot() {
         return new HashMap<>(auditCache);
@@ -273,9 +298,8 @@ public class QuantScapersPlugin extends Plugin {
             // reacting to it would double-render every audit or vault mutation.
             return;
         }
-        if ("contactEmail".equals(event.getKey())) {
-            // Gate state may have just changed (blank -> set, or vice versa) - re-evaluate now
-            // rather than waiting up to 30s for the next scheduled tick.
+        if ("enableWikiMarketData".equals(event.getKey())) {
+            // Consent state changed - update the gate or fetch immediately while visible.
             requestImmediateRefresh();
             return;
         }
@@ -283,11 +307,8 @@ public class QuantScapersPlugin extends Plugin {
         renderCurrentState();
     }
 
-    private boolean isGated() {
-        // Format-checked, not just non-empty - "x" used to satisfy this gate,
-        // which defeated the point (an install the wiki team can't actually
-        // reach). See Constants.isPlausibleEmail for what "valid" means here.
-        return !Constants.isPlausibleEmail(config.contactEmail());
+    private boolean isWikiDataDisabled() {
+        return !config.enableWikiMarketData();
     }
 
     private void tick() {
@@ -295,20 +316,18 @@ public class QuantScapersPlugin extends Plugin {
             return;
         }
         try {
-            // No contact email set - the Wiki API never sees a single request from this
-            // plugin until the user provides one. This is what makes the "ask" in settings
-            // meaningful instead of just a suggestion nobody acts on.
-            if (isGated()) {
-                SwingUtilities.invokeLater(panel::showEmailGate);
+            // Hidden panels make no network requests. onActivate() requests a fresh tick.
+            if (panel == null || !panel.isShowing()) {
+                return;
+            }
+
+            // Third-party Wiki access is explicit and disabled by default.
+            if (isWikiDataDisabled()) {
+                SwingUtilities.invokeLater(panel::showWikiDataGate);
                 return;
             }
 
             long now = System.currentTimeMillis();
-            boolean panelVisible = panel != null && panel.isShowing();
-            if (!panelVisible && lastAnalysisMs > 0 && now - lastAnalysisMs < PAUSE_GRACE_MS) {
-                return;
-            }
-
             if (lastAnalysisMs > 0 && now - lastAnalysisMs < FRESH_ENOUGH_MS) {
                 renderCurrentState();
                 return;
@@ -317,6 +336,10 @@ public class QuantScapersPlugin extends Plugin {
             List<MappingItem> mapping = client.fetchMapping();
             LatestResponse latestResp = client.fetchLatest();
             StatsResponse stats24hResp = client.fetch24h();
+            if (mapping == null || latestResp == null || stats24hResp == null
+                || latestResp.getData() == null || stats24hResp.getData() == null) {
+                throw new IOException("QuantScapers: incomplete market response");
+            }
             StatsResponse stats5mResp = null;
             try {
                 stats5mResp = client.fetch5m();
@@ -363,7 +386,7 @@ public class QuantScapersPlugin extends Plugin {
         List<AnalyzedItem> display = totalMatched > Constants.MAX_CARDS_RENDERED
             ? result.items.subList(0, Constants.MAX_CARDS_RENDERED)
             : result.items;
-        Map<Integer, AuditResult> snapshot = new HashMap<>(auditCache);
+        Map<Integer, AuditResult> snapshot = freshAuditSnapshot(System.currentTimeMillis());
 
         List<TrackedTrade> vaultSnapshot = new ArrayList<>(vault.values());
         vaultSnapshot.sort(Comparator.comparingLong(TrackedTrade::getTrackedAtMs).reversed());
@@ -538,6 +561,24 @@ public class QuantScapersPlugin extends Plugin {
         return changed;
     }
 
+    private boolean isAuditUsable(AuditResult audit, long nowMs) {
+        if (audit == null) {
+            return false;
+        }
+        long ttl = audit.isFailed() ? Constants.FAILED_AUDIT_RETRY_MS : Constants.AUDIT_TTL_MS;
+        return nowMs >= audit.getTs() && nowMs - audit.getTs() < ttl;
+    }
+
+    private Map<Integer, AuditResult> freshAuditSnapshot(long nowMs) {
+        Map<Integer, AuditResult> snapshot = new HashMap<>();
+        for (Map.Entry<Integer, AuditResult> entry : auditCache.entrySet()) {
+            if (isAuditUsable(entry.getValue(), nowMs)) {
+                snapshot.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return snapshot;
+    }
+
     /** Returns true if at least one audit actually wrote to auditCache (success or recorded failure). */
     private boolean runAutoAudit(List<AnalyzedItem> topPicks, List<AnalyzedItem> analyzed) {
         long now = System.currentTimeMillis();
@@ -551,7 +592,7 @@ public class QuantScapersPlugin extends Plugin {
                 break;
             }
             AuditResult cached = auditCache.get(pick.getId());
-            if (cached != null && now - cached.getTs() < Constants.AUDIT_TTL_MS) {
+            if (isAuditUsable(cached, now)) {
                 continue;
             }
             autoAuditBudget.count++;
@@ -571,7 +612,7 @@ public class QuantScapersPlugin extends Plugin {
                     break;
                 }
                 AuditResult cached = auditCache.get(item.getId());
-                if (cached != null && now - cached.getTs() < Constants.AUDIT_TTL_MS) {
+                if (isAuditUsable(cached, now)) {
                     continue;
                 }
                 if (VerdictEngine.verdict(item, cached).getRating() != Verdict.Rating.AVOID) {
@@ -594,6 +635,9 @@ public class QuantScapersPlugin extends Plugin {
         }
         try {
             TimeseriesResponse resp = client.fetchTimeseries(item.getId());
+            if (resp == null || resp.getData() == null || resp.getData().isEmpty()) {
+                throw new IOException("QuantScapers: incomplete timeseries response for item " + item.getId());
+            }
             AuditResult result = AuditEngine.audit(resp.getData(), item.getHigh(), System.currentTimeMillis());
             auditCache.put(item.getId(), result);
         } catch (Exception e) {
@@ -653,7 +697,9 @@ public class QuantScapersPlugin extends Plugin {
             long now = System.currentTimeMillis();
             for (Map.Entry<Integer, TrackedTrade> e : persisted.entrySet()) {
                 if (!VaultPruner.pastHardTtl(e.getValue(), now)) {
-                    vault.put(e.getKey(), e.getValue());
+                    // Dead-quote grace is runtime-only: a closed client cannot observe
+                    // whether a quote was unhealthy, so restart the grace clock here.
+                    vault.put(e.getKey(), e.getValue().toBuilder().lastSeenHealthyMs(now).build());
                 }
             }
         } catch (Exception e) {
@@ -730,7 +776,7 @@ public class QuantScapersPlugin extends Plugin {
             // Notifications previously matched on profit/ROI alone, bypassing the same
             // stale-quote/trap guards every verdict and Top Pick already respects - a
             // manipulated spread (exactly what this plugin exists to catch) could fire
-            // a "New Flip!" notification. Both flip and alch notifications now require
+            // a market-opportunity notification. Both trade and alch notifications now require
             // passing these gates first, same as isBestBet/getVerdict.
             if (VerdictEngine.isStaleQuote(it) || VerdictEngine.isPossibleTrap(it)) {
                 continue;
@@ -766,27 +812,27 @@ public class QuantScapersPlugin extends Plugin {
 
         if (matchFlip && matchAlch) {
             message.append(item.getName())
-                .append(" is profitable! Flip Profit: ")
+                .append(". Trade profit: ")
                 .append(GpFormat.format(item.getRealisticProfit()))
                 .append(" (")
                 .append(String.format("%.1f", item.getRoi()))
-                .append("% ROI), Alch Profit: ")
+                .append("% ROI), Alch profit: ")
                 .append(GpFormat.format(item.getAlchProfit()))
                 .append(" (")
                 .append(String.format("%.1f", item.getAlchROI()))
                 .append("% ROI)");
         } else if (matchFlip) {
-            message.append("New Flip: ")
+            message.append("Market opportunity: ")
                 .append(item.getName())
-                .append(" - Profit: ")
+                .append(". Profit: ")
                 .append(GpFormat.format(item.getRealisticProfit()))
                 .append(" (")
                 .append(String.format("%.1f", item.getRoi()))
                 .append("% ROI)");
         } else {
-            message.append("New Alch: ")
+            message.append("Alch opportunity: ")
                 .append(item.getName())
-                .append(" - Profit: ")
+                .append(". Profit: ")
                 .append(GpFormat.format(item.getAlchProfit()))
                 .append(" (")
                 .append(String.format("%.1f", item.getAlchROI()))

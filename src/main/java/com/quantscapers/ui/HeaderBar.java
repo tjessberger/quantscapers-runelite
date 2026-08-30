@@ -26,7 +26,7 @@ public class HeaderBar extends JPanel {
         title.setFont(FontManager.getRunescapeBoldFont());
         title.setForeground(QSColors.AMBER_500);
 
-        JLabel subtitle = new JLabel("PREDICTIVE TERMINAL");
+        JLabel subtitle = new JLabel("MARKET INTELLIGENCE");
         subtitle.setFont(FontManager.getRunescapeSmallFont());
         subtitle.setForeground(QSColors.SLATE_500);
 

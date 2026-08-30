@@ -37,9 +37,7 @@ public final class MarketAnalyzer {
             int limit = item.limitOrZero();
             int highalch = item.highalchOrZero();
 
-            int tax = high < Constants.TAX_FREE_FLOOR_GP
-                ? 0
-                : (int) Math.min(Math.floor(high * Constants.TAX_RATE), Constants.TAX_CAP_GP);
+            int tax = Constants.geTax(high);
             int margin = high - low - tax;
 
             VolumeStats s = stats24h == null ? null : stats24h.get(item.getId());

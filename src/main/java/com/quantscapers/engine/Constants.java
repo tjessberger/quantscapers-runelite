@@ -7,11 +7,12 @@ public final class Constants {
     public static final int TAX_CAP_GP = 5_000_000;
     public static final int TAX_FREE_FLOOR_GP = 50;
     public static final int MINUTES_IN_DAY = 1440;
-    public static final int HEARTBEAT_SECONDS = 30; // NEVER lower
+    public static final int HEARTBEAT_SECONDS = 60; // NEVER lower
     public static final int NATURE_RUNE_ID = 561;
     public static final int NATURE_RUNE_FALLBACK_GP = 195;
     public static final long QUOTE_STALE_SEC = 2700; // 45 min, matches web/worker as of 2026-07-17
     public static final long AUDIT_TTL_MS = 3_600_000; // 1 h
+    public static final long FAILED_AUDIT_RETRY_MS = 300_000; // 5 min
     public static final long AUTO_AUDIT_WINDOW_MS = 1_800_000; // 30 min
     public static final int AUTO_AUDIT_MAX_CALLS = 3; // NEVER raise
     // Manual "Audit" button clicks were previously uncapped (serialized by
@@ -30,24 +31,16 @@ public final class Constants {
     public static final long SUPPRESSION_DURATION_MS = 7_200_000L; // 2 h
     public static final int SUPPRESSION_HIT_RATE_THRESHOLD = 25; // likelihood % below this confirms
 
-    private static final String USER_AGENT_PREFIX = "QuantScapers RuneLite plugin";
+    public static final String WIKI_USER_AGENT = "QuantScapers/1.0 (RuneLite plugin; contact: "
+        + "https://github.com/tjessberger/quantscapers-runelite/issues)";
     public static final String API_BASE = "https://prices.runescape.wiki/api/v1/osrs";
 
-    /** Every install should carry its own contact so wiki maintainers can reach that user, not a shared default. */
-    public static String buildUserAgent(String contactEmail) {
-        String contact = (contactEmail == null || contactEmail.trim().isEmpty())
-            ? "no contact email set" : contactEmail.trim();
-        return USER_AGENT_PREFIX + " - " + contact;
+    /** GE tax for a sell price, including the tax-free floor and cap. */
+    public static int geTax(int sellPrice) {
+        if (sellPrice < TAX_FREE_FLOOR_GP) {
+            return 0;
+        }
+        return (int) Math.min(Math.floor(sellPrice * TAX_RATE), TAX_CAP_GP);
     }
 
-    // Deliberately loose - this exists to stop garbage like "x" or "asdf" from
-    // satisfying the contact-email gate, not to validate RFC 5322 correctness.
-    // A plausible-looking address that happens to be wrong is still a much
-    // better fault than an install that's unreachable by construction.
-    private static final java.util.regex.Pattern PLAUSIBLE_EMAIL =
-        java.util.regex.Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
-
-    public static boolean isPlausibleEmail(String email) {
-        return email != null && PLAUSIBLE_EMAIL.matcher(email.trim()).matches();
-    }
 }

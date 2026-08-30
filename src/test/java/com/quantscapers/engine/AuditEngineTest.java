@@ -99,6 +99,6 @@ public class AuditEngineTest {
         AuditResult r = AuditEngine.failed(5000L);
         assertTrue(r.isFailed());
         assertEquals(0, r.getLikelihood());
-        assertEquals("Audit Failed", r.getVerdict());
+        assertEquals("Audit failed", r.getVerdict());
     }
 }

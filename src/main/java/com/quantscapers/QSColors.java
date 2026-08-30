@@ -42,11 +42,11 @@ public final class QSColors {
     public static Color forAuditVerdict(String verdict) {
         if (verdict == null) return SLATE_400;
         switch (verdict) {
-            case "Strong Move": return EMERALD_400;
+            case "Strong move": return EMERALD_400;
             case "Slipping": return RED_400;
-            case "Peak/Stagnant": return AMBER_400;
-            case "Hyper Active": return EMERALD_500;
-            case "Audit Failed": return RED_400;
+            case "Peak or stagnant": return AMBER_400;
+            case "Highly active": return EMERALD_500;
+            case "Audit failed": return RED_400;
             case "Stable":
             default: return SLATE_400;
         }

@@ -14,7 +14,7 @@ import net.runelite.client.ui.FontManager;
 
 /**
  * Renders an audit result as separate, labeled lines instead of one crammed
- * "72% hit rate · Hyper Active · grade A" string — that format read as noise
+ * A single string such as "72% hit rate · Highly active · grade A" reads as noise
  * and clipped in the narrow sidebar. Shared by TopPicksBox and ItemCardBox
  * so both present audit info identically.
  */
@@ -32,12 +32,12 @@ public final class AuditSummary {
             return box;
         }
         if (hist.isFailed()) {
-            box.add(line("Audit failed - try again", QSColors.RED_400));
+            box.add(line("Audit failed. Try again.", QSColors.RED_400));
             return box;
         }
 
         box.add(line(hist.getVerdict(), QSColors.forAuditVerdict(hist.getVerdict())));
-        box.add(line(hist.getLikelihood() + "% of the time, the sell price was actually reached",
+        box.add(line("Sell price reached in " + hist.getLikelihood() + "% of hourly intervals",
             QSColors.SLATE_200));
         box.add(Box.createVerticalStrut(3));
 

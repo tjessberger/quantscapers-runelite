@@ -49,11 +49,10 @@ public class QuantScapersPanel extends PluginPanel {
     private final PluginTabBar tabBar;
     private final FilterBar filterBar;
     private final TopPicksBox topPicksBox;
-    private final MarketMoversBox marketMoversBox;
     private final MarketPulseBox marketPulseBox;
     private final VaultBox vaultBox;
     private final JPanel errorBanner;
-    private final JPanel emailNotice;
+    private final JPanel wikiDataNotice;
     private final ScrollableListPanel overviewContainer;
     private final ScrollableListPanel scannerContainer;
     private final ScrollableListPanel watchlistContainer;
@@ -95,8 +94,7 @@ public class QuantScapersPanel extends PluginPanel {
         filterBar = new FilterBar(plugin);
         topPicksBox = new TopPicksBox(plugin);
         topPicksBox.addPropertyChangeListener("auditComplete", e -> refreshAuditsAndRerender());
-        marketMoversBox = new MarketMoversBox();
-        marketPulseBox = new MarketPulseBox();
+        marketPulseBox = new MarketPulseBox(this::openInScanner);
 
         vaultBox = new VaultBox(plugin, itemManager);
         vaultBox.addPropertyChangeListener("untrack", e -> plugin.untrack((Integer) e.getNewValue()));
@@ -104,8 +102,8 @@ public class QuantScapersPanel extends PluginPanel {
 
         errorBanner = buildErrorBanner();
         errorBanner.setVisible(false);
-        emailNotice = buildEmailNotice();
-        refreshEmailNotice();
+        wikiDataNotice = buildWikiDataNotice();
+        refreshWikiDataNotice();
 
         overviewContainer = contentPanel();
         scannerContainer = contentPanel();
@@ -116,13 +114,12 @@ public class QuantScapersPanel extends PluginPanel {
         overviewState = statePanel();
         scannerState = statePanel();
         watchlistState = statePanel();
-        overviewState.setContent("QUANTSCAPERS", "Syncing market data...");
-        scannerState.setContent("QUANTSCAPERS", "Syncing market data...");
-        watchlistState.setContent("WATCHLIST", "Track an item from Scanner to monitor it here.");
+        overviewState.setContent("QUANTSCAPERS", "Loading market data...");
+        scannerState.setContent("QUANTSCAPERS", "Loading market data...");
+        watchlistState.setContent("WATCHLIST", "Track an item in Scanner to see it here.");
 
         overviewContainer.add(marketPulseBox);
         overviewContainer.add(topPicksBox);
-        overviewContainer.add(marketMoversBox);
         overviewContainer.add(overviewState);
 
         scannerContainer.add(filterBar);
@@ -142,7 +139,7 @@ public class QuantScapersPanel extends PluginPanel {
         north.add(headerBar);
         north.add(siteLinksBar);
         north.add(tabBar);
-        north.add(emailNotice);
+        north.add(wikiDataNotice);
         north.add(errorBanner);
         alignLeft(north);
 
@@ -165,7 +162,7 @@ public class QuantScapersPanel extends PluginPanel {
             countdownTimer = new Timer(1000, e -> tickCountdown());
         }
         countdownTimer.start();
-        refreshEmailNotice();
+        refreshWikiDataNotice();
         plugin.requestImmediateRefresh();
     }
 
@@ -208,6 +205,12 @@ public class QuantScapersPanel extends PluginPanel {
         repaint();
     }
 
+    /** Sends an Overview insight into the execution-oriented Scanner without fetching again. */
+    private void openInScanner(AnalyzedItem item) {
+        plugin.setSearchTerm(item.getName());
+        showTab(PluginTabBar.Tab.SCANNER);
+    }
+
     /** Called on the EDT by the plugin after every successful analysis tick. */
     public void render(List<AnalyzedItem> display, List<AnalyzedItem> topPicks, List<AnalyzedItem> market,
                         Map<Integer, AuditResult> auditCache, List<TrackedTrade> vault,
@@ -228,7 +231,7 @@ public class QuantScapersPanel extends PluginPanel {
         marketPulseBox.update(market);
         filterBar.setSuppressedInfo(suppressedCount, showSuppressed);
         errorBanner.setVisible(!syncOk);
-        refreshEmailNotice();
+        refreshWikiDataNotice();
         rerenderFromCache();
     }
 
@@ -236,8 +239,8 @@ public class QuantScapersPanel extends PluginPanel {
         errorBanner.setVisible(true);
     }
 
-    /** Called when no valid contact email is configured; no API request has occurred. */
-    public void showEmailGate() {
+    /** Called when Wiki market data is disabled; no API request has occurred. */
+    public void showWikiDataGate() {
         if (gateShown) {
             return;
         }
@@ -247,14 +250,14 @@ public class QuantScapersPanel extends PluginPanel {
         topPicksBox.setVisible(false);
         vaultBox.setVisible(false);
         errorBanner.setVisible(false);
-        refreshEmailNotice();
+        refreshWikiDataNotice();
 
-        overviewState.setContent("Valid contact email required", "No data until you enter a real email address above.");
+        overviewState.setContent("Wiki market data is off", "Open plugin settings to load market intelligence.");
         overviewState.setVisible(true);
-        scannerState.setContent("Valid contact email required", "No data until you enter a real email address above.");
+        scannerState.setContent("Wiki market data is off", "Open plugin settings to load market data.");
         listContainer.removeAll();
         listContainer.add(scannerState);
-        watchlistState.setContent("Valid contact email required", "No tracked-item data until you enter an email above.");
+        watchlistState.setContent("Wiki market data is off", "Open plugin settings to refresh tracked prices.");
         watchlistState.setVisible(true);
         tabBar.setWatchlistCount(0);
         revalidate();
@@ -267,16 +270,15 @@ public class QuantScapersPanel extends PluginPanel {
 
         filterBar.setLeadsCount(lastTotalMatched);
         topPicksBox.update(lastTopPicks, lastAuditCache);
-        marketMoversBox.update(lastMarket);
         vaultBox.update(lastVault, lastVaultLive, lastAuditCache, analyzedById(lastMarket));
         tabBar.setWatchlistCount(lastVault.size());
-        overviewState.setVisible(!marketPulseBox.isVisible() && !topPicksBox.isVisible() && !marketMoversBox.isVisible());
+        overviewState.setVisible(!marketPulseBox.isVisible() && !topPicksBox.isVisible());
         if (overviewState.isVisible()) {
-            overviewState.setContent("No market briefing yet", "Market data will appear after the next successful refresh.");
+            overviewState.setContent("No market data yet", "Market Intelligence appears after a successful refresh.");
         }
         watchlistState.setVisible(lastVault.isEmpty());
         if (watchlistState.isVisible()) {
-            watchlistState.setContent("WATCHLIST", "Track an item from Scanner to monitor it here.");
+            watchlistState.setContent("WATCHLIST", "Track an item in Scanner to see it here.");
         }
 
         renderScannerList();
@@ -299,7 +301,7 @@ public class QuantScapersPanel extends PluginPanel {
         listContainer.removeAll();
         liveCards.clear();
         if (lastDisplay.isEmpty()) {
-            scannerState.setContent("No unicorns detected", "Loosen Budget, Profit, ROI or Fill Time to see leads.");
+            scannerState.setContent("No matching items", "Try lower budget, profit, ROI, or fill-time filters.");
             listContainer.add(scannerState);
             return;
         }
@@ -343,18 +345,49 @@ public class QuantScapersPanel extends PluginPanel {
         rerenderFromCache();
     }
 
-    private void refreshEmailNotice() {
-        emailNotice.setVisible(!Constants.isPlausibleEmail(plugin.getConfig().contactEmail()));
+    private void refreshWikiDataNotice() {
+        wikiDataNotice.setVisible(!plugin.getConfig().enableWikiMarketData());
     }
 
-    private JPanel buildEmailNotice() {
+    private JPanel buildWikiDataNotice() {
         JPanel banner = new JPanel(new BorderLayout(4, 0));
         banner.setBackground(new java.awt.Color(0xf5, 0x9e, 0x0b, 25));
         banner.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
 
-        JLabel label = new JLabel("<html><body style='width:130px'>Set a contact email in plugin settings.</body></html>");
-        label.setForeground(QSColors.AMBER_400);
-        label.setFont(FontManager.getRunescapeSmallFont());
+        JLabel prompt = new JLabel("Wiki market data is off.");
+        prompt.setForeground(QSColors.AMBER_400);
+        prompt.setFont(FontManager.getRunescapeSmallFont());
+
+        JLabel openLabel = new JLabel("Open ");
+        openLabel.setForeground(QSColors.AMBER_400);
+        openLabel.setFont(FontManager.getRunescapeSmallFont());
+
+        JLabel settingsLink = new JLabel("<html><u>plugin settings</u></html>");
+        settingsLink.setForeground(QSColors.AMBER_400);
+        settingsLink.setFont(FontManager.getRunescapeSmallFont());
+        settingsLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        settingsLink.setToolTipText("Open QuantScapers settings");
+        settingsLink.addMouseListener(new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) { plugin.openSettings(); }
+        });
+
+        JLabel period = new JLabel(" to enable it.");
+        period.setForeground(QSColors.AMBER_400);
+        period.setFont(FontManager.getRunescapeSmallFont());
+
+        JPanel actionPanel = new JPanel();
+        actionPanel.setLayout(new BoxLayout(actionPanel, BoxLayout.X_AXIS));
+        actionPanel.setOpaque(false);
+        actionPanel.add(openLabel);
+        actionPanel.add(Box.createHorizontalStrut(3));
+        actionPanel.add(settingsLink);
+        actionPanel.add(period);
+
+        JPanel promptPanel = new JPanel();
+        promptPanel.setLayout(new BoxLayout(promptPanel, BoxLayout.Y_AXIS));
+        promptPanel.setOpaque(false);
+        promptPanel.add(prompt);
+        promptPanel.add(actionPanel);
 
         JLabel why = new JLabel("<html><u>Why?</u></html>");
         why.setForeground(QSColors.AMBER_400);
@@ -364,18 +397,17 @@ public class QuantScapersPanel extends PluginPanel {
             @Override public void mouseClicked(MouseEvent e) { showWhyPopover(why); }
         });
 
-        banner.add(label, BorderLayout.CENTER);
+        banner.add(promptPanel, BorderLayout.CENTER);
         banner.add(why, BorderLayout.EAST);
         return banner;
     }
 
     private void showWhyPopover(JComponent anchor) {
-        JLabel content = new JLabel("<html><body style='width:190px'>Saved locally and sent only to the Wiki Prices "
-            + "API, as part of the User-Agent on every price request &mdash; nowhere else, "
-            + "no telemetry, nothing collected by this plugin."
-            + "<br><br>It's what keeps QuantScapers compliant with the wiki's usage rules, since "
-            + "every install should be individually identifiable rather than anonymous "
-            + "instead of everyone sharing one address.</body></html>");
+        JLabel content = new JLabel("<html><body style='width:190px'>When you enable this option, "
+            + "QuantScapers requests market snapshots from the OSRS Wiki Prices API. The Wiki receives "
+            + "your IP address as part of the normal HTTP request.<br><br>QuantScapers does not send "
+            + "RuneScape account details, player data, Grand Exchange offers, or telemetry. Requests use "
+            + "the project issue tracker as the contact route. We do not ask for your email.</body></html>");
         content.setForeground(QSColors.SLATE_200);
         content.setFont(FontManager.getRunescapeSmallFont());
         content.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
@@ -393,10 +425,10 @@ public class QuantScapersPanel extends PluginPanel {
     }
 
     private JPanel buildAllLeadsHeader() {
-        JLabel title = new JLabel("ALL LEADS");
+        JLabel title = new JLabel("MATCHING ITEMS");
         title.setFont(FontManager.getRunescapeBoldFont());
         title.setForeground(QSColors.AMBER_400);
-        JLabel subtitle = new JLabel("everything passing your filters");
+        JLabel subtitle = new JLabel("Items that match your filters");
         subtitle.setFont(FontManager.getRunescapeSmallFont());
         subtitle.setForeground(QSColors.SLATE_500);
 
@@ -422,7 +454,7 @@ public class QuantScapersPanel extends PluginPanel {
         JPanel banner = new JPanel(new BorderLayout());
         banner.setBackground(new java.awt.Color(0xef, 0x44, 0x44, 25));
         banner.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
-        JLabel label = new JLabel("Market sync failed - retrying next cycle.");
+        JLabel label = new JLabel("Market data could not load. Retrying soon.");
         label.setForeground(QSColors.RED_400);
         label.setFont(FontManager.getRunescapeSmallFont());
         banner.add(label, BorderLayout.CENTER);

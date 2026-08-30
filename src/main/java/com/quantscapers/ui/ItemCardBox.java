@@ -14,7 +14,6 @@ import com.quantscapers.ui.util.GpFormat;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
-import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
@@ -23,7 +22,6 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -37,6 +35,7 @@ import javax.swing.Timer;
 import javax.swing.border.LineBorder;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.FontManager;
+import net.runelite.client.util.LinkBrowser;
 
 /**
  * One opportunity card: collapsed shows a one-line verdict summary,
@@ -286,7 +285,7 @@ public class ItemCardBox extends JPanel {
         profit.setBorder(BorderFactory.createEmptyBorder(4, 6, 0, 6));
         box.add(profit);
 
-        JLabel wait = wrappedLabel("no fill in ~" + ticket.getWaitMin() + "min? cancel & re-check",
+        JLabel wait = wrappedLabel("No fill after ~" + ticket.getWaitMin() + " min? Cancel and check again.",
             QSColors.SLATE_500, UiConstants.CARD_TEXT_WIDTH_PX);
         wait.setBorder(BorderFactory.createEmptyBorder(0, 6, 4, 6));
         box.add(wait);
@@ -310,7 +309,7 @@ public class ItemCardBox extends JPanel {
         box.add(profit);
 
         int natRune = item.getHighalch() - item.getLow() - item.getAlchMarginPer();
-        JLabel nature = wrappedLabel("includes nature rune cost (" + GpFormat.withCommas(natRune) + " gp)",
+        JLabel nature = wrappedLabel("Nature rune cost included (" + GpFormat.withCommas(natRune) + " gp)",
             QSColors.SLATE_500, UiConstants.CARD_TEXT_WIDTH_PX);
         nature.setBorder(BorderFactory.createEmptyBorder(0, 6, 4, 6));
         box.add(nature);
@@ -331,7 +330,7 @@ public class ItemCardBox extends JPanel {
         JLabel text = wrappedLabel(label + " " + qty + " @ " + GpFormat.withCommas(price),
             labelColor, TICKET_ROW_TEXT_WIDTH_PX);
         JButton copy = flatButton("⧉");
-        copy.setToolTipText("Copy " + price);
+        copy.setToolTipText("Copy price");
         copy.addActionListener(e -> copyToClipboard(copy, String.valueOf(price)));
 
         row.add(text, BorderLayout.CENTER);
@@ -412,7 +411,7 @@ public class ItemCardBox extends JPanel {
         well.add(age);
 
         if (avg5m > 0) {
-            well.add(smallLabel("5min avg " + GpFormat.withCommas(Math.round(avg5m)), QSColors.SLATE_500));
+            well.add(smallLabel("5min average " + GpFormat.withCommas(Math.round(avg5m)), QSColors.SLATE_500));
         }
         if ("Sell".equals(label)) {
             well.add(smallLabel("tax −" + GpFormat.withCommas(item.getTax()), QSColors.SLATE_500));
@@ -423,11 +422,11 @@ public class ItemCardBox extends JPanel {
     private JLabel metaLine() {
         StringBuilder sb = new StringBuilder();
         sb.append("Limit ").append(GpFormat.withCommas(item.getLimit()))
-            .append(" · Vol ").append(GpFormat.format(item.getVol24h()));
+            .append(" · 24h volume ").append(GpFormat.format(item.getVol24h()));
         if (item.getVol5m() != null) {
-            sb.append(" · 5min: ").append(GpFormat.format(item.getVol5m()));
+            sb.append(" · 5min volume ").append(GpFormat.format(item.getVol5m()));
         }
-        sb.append(" · EFT ").append(Math.round(item.getEft())).append("min");
+        sb.append(" · Fill ").append(Math.round(item.getEft())).append(" min");
         Color color = (item.getVol5m() != null && item.getVol5m() > 0) ? QSColors.EMERALD_500 : QSColors.SLATE_500;
         return wrappedLabel(sb.toString(), color, UiConstants.CARD_TEXT_WIDTH_PX);
     }
@@ -438,10 +437,10 @@ public class ItemCardBox extends JPanel {
         box.setOpaque(false);
         box.setAlignmentX(LEFT_ALIGNMENT);
 
-        auditButton = flatTextButton(hist != null ? "Re-Audit" : "Audit", QSColors.AMBER_400);
+        auditButton = flatTextButton(hist != null ? "Audit again" : "Run audit", QSColors.AMBER_400);
         if (auditInFlight) {
             auditButton.setEnabled(false);
-            auditButton.setText("Scanning...");
+            auditButton.setText("Auditing...");
         }
         auditButton.addActionListener(e -> runAudit());
 
@@ -467,9 +466,9 @@ public class ItemCardBox extends JPanel {
         }
         auditInFlight = true;
         auditButton.setEnabled(false);
-        auditButton.setText("Scanning...");
+        auditButton.setText("Auditing...");
         // Panel tracks in-flight audits separately from this card instance so the
-        // "Scanning..." state survives the periodic re-render (a 30s poll tick
+        // in-flight audit state survives the periodic re-render (a 30s poll tick
         // rebuilds every card from scratch and would otherwise silently drop it).
         firePropertyChange("auditStarted", false, true);
         plugin.requestAudit(item, () -> {
@@ -489,11 +488,7 @@ public class ItemCardBox extends JPanel {
         link.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                try {
-                    Desktop.getDesktop().browse(new URI("https://prices.runescape.wiki/osrs/item/" + item.getId()));
-                } catch (Exception ignored) {
-                    // best-effort; no in-panel fallback needed for an external link
-                }
+                LinkBrowser.browse("https://prices.runescape.wiki/osrs/item/" + item.getId());
             }
         });
         return link;

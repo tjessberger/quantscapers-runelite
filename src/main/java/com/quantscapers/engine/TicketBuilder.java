@@ -1,9 +1,9 @@
 package com.quantscapers.engine;
 
 /**
- * Exact GE order instructions for the flips strategy: undercut/overcut by
+ * Exact GE order instructions for the trade strategy: undercut/overcut by
  * 1gp, quantity capped by buy limit and real daily volume. Direct
- * transcription of buildTicket() in engine.html (flips branch only — the
+ * transcription of buildTicket() in engine.html (trade branch only — the
  * alch variant is deferred to v1.1, see RUNELITE_PLUGIN_SPEC.md Appendix A).
  */
 public final class TicketBuilder {
@@ -16,9 +16,7 @@ public final class TicketBuilder {
         }
         int buyAt = item.getLow() + 1;
         int sellAt = Math.max(item.getHigh() - 1, 0);
-        int tax = sellAt < Constants.TAX_FREE_FLOOR_GP
-            ? 0
-            : (int) Math.min(Math.floor(sellAt * Constants.TAX_RATE), Constants.TAX_CAP_GP);
+        int tax = Constants.geTax(sellAt);
         int perUnit = sellAt - buyAt - tax;
         if (perUnit <= 0) {
             return null;

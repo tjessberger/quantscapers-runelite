@@ -109,8 +109,8 @@ public class FilterBar extends JPanel {
 
     public void setLeadsCount(int n) {
         String suffix = n > Constants.MAX_CARDS_RENDERED
-            ? " LEADS (top " + Constants.MAX_CARDS_RENDERED + " shown)"
-            : " LEADS";
+            ? " MATCHES (top " + Constants.MAX_CARDS_RENDERED + " shown)"
+            : " MATCHES";
         leadsLabel.setText(n + suffix);
     }
 
@@ -121,7 +121,7 @@ public class FilterBar extends JPanel {
             suppressedLabel.setVisible(false);
             return;
         }
-        suppressedLabel.setText(suppressedCount + " suppressed · " + (showing ? "hide" : "show"));
+        suppressedLabel.setText(suppressedCount + " filtered out · " + (showing ? "hide" : "show"));
         suppressedLabel.setVisible(true);
     }
 
@@ -157,9 +157,9 @@ public class FilterBar extends JPanel {
         try {
             presetCombo.removeAllItems();
             presetCombo.addItem("Preset...");
-            presetCombo.addItem("Fast Flips");
-            presetCombo.addItem("Big Ticket");
-            presetCombo.addItem("High Yield");
+            presetCombo.addItem("Quick trades");
+            presetCombo.addItem("High budget");
+            presetCombo.addItem("High yield");
             for (String name : customPresets.keySet()) {
                 presetCombo.addItem(name);
             }
@@ -297,7 +297,7 @@ public class FilterBar extends JPanel {
             String name = javax.swing.JOptionPane.showInputDialog(this, "Enter preset name:", "Save Custom Preset", javax.swing.JOptionPane.PLAIN_MESSAGE);
             if (name != null && !name.trim().isEmpty()) {
                 name = name.trim();
-                if ("Fast Flips".equalsIgnoreCase(name) || "Big Ticket".equalsIgnoreCase(name) || "High Yield".equalsIgnoreCase(name) || "Preset...".equalsIgnoreCase(name)) {
+                if ("Quick trades".equalsIgnoreCase(name) || "High budget".equalsIgnoreCase(name) || "High yield".equalsIgnoreCase(name) || "Preset...".equalsIgnoreCase(name)) {
                     javax.swing.JOptionPane.showMessageDialog(this, "Cannot overwrite built-in presets.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
                     return;
                 }
@@ -346,8 +346,8 @@ public class FilterBar extends JPanel {
         grid.add(labeledCombo("Min Profit", profitCombo));
         grid.add(labeledCombo("Min ROI", roiCombo));
         grid.add(labeledCombo("Fill Time", fillCombo));
-        grid.add(labeledButton("Preset Actions", savePresetBtn));
-        grid.add(labeledButton("Preset Actions", deletePresetBtn));
+        grid.add(labeledButton("Custom preset", savePresetBtn));
+        grid.add(labeledButton("Custom preset", deletePresetBtn));
         return grid;
     }
 
@@ -389,13 +389,13 @@ public class FilterBar extends JPanel {
     }
 
     private void applyPreset(int idx) {
-        if (idx == 1) { // Fast Flips
+        if (idx == 1) { // Quick trades
             setConfig("maxFillTime", QuantScapersConfig.FillTimeCap.H1);
             setConfig("minROI", QuantScapersConfig.RoiFloor.P1);
-        } else if (idx == 2) { // Big Ticket
+        } else if (idx == 2) { // High budget
             setConfig("maxBuyPrice", QuantScapersConfig.BudgetCap.MAX);
             setConfig("minProfit", QuantScapersConfig.ProfitFloor.M5);
-        } else if (idx == 3) { // High Yield
+        } else if (idx == 3) { // High yield
             setConfig("minROI", QuantScapersConfig.RoiFloor.P10);
             setConfig("maxFillTime", QuantScapersConfig.FillTimeCap.ANY);
         } else if (idx > 3) {

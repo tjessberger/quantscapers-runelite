@@ -63,7 +63,7 @@ public class VerdictEngineTest {
         AnalyzedItem it = base().vol5m(0L).build();
         Verdict v = VerdictEngine.verdict(it, null);
         assertEquals(Verdict.Rating.RISKY, v.getRating());
-        assertTrue(v.getReason().startsWith("Nothing traded in the last 5 minutes"));
+        assertTrue(v.getReason().startsWith("No trades in the last 5 minutes"));
     }
 
     @Test
@@ -78,7 +78,7 @@ public class VerdictEngineTest {
         AnalyzedItem it = base().eft(9999).build();
         Verdict v = VerdictEngine.verdict(it, null);
         assertEquals(Verdict.Rating.RISKY, v.getRating());
-        assertEquals("Slow fill — roughly 167h per side.", v.getReason());
+        assertEquals("Slow fill. About 167h per side.", v.getReason());
     }
 
     @Test

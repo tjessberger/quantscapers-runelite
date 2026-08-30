@@ -4,7 +4,7 @@ import lombok.Builder;
 import lombok.Value;
 
 /**
- * Result of a deep-probe (1h timeseries) audit for one item, cached for
+ * Result of a price history (1h timeseries) audit for one item, cached for
  * AUDIT_TTL_MS. Intentionally holds no colors — those are a rendering
  * concern derived at draw time from {@code verdict}/{@code stabilityGrade}
  * (see QSColors), which also keeps this class trivially Gson-serializable
