@@ -43,8 +43,8 @@ public class WikiPricesClient {
 
     private static final long MAPPING_CACHE_MS = 86_400_000L;
     private static final long STATS_CACHE_MS = 300_000L;
-    private static final long BASE_BACKOFF_MS = 60_000L;
-    private static final long MAX_BACKOFF_MS = 900_000L;
+    private static final long BASE_BACKOFF_MS = 120_000L;
+    private static final long MAX_BACKOFF_MS = 1_800_000L;
 
     public WikiPricesClient(OkHttpClient http, Gson gson) {
         this.http = http;

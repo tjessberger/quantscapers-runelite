@@ -33,7 +33,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 import javax.swing.border.LineBorder;
-import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.LinkBrowser;
 
@@ -60,7 +59,7 @@ public class ItemCardBox extends JPanel {
     private final Color cardBorderColor;
     private final boolean tracked;
 
-    public ItemCardBox(QuantScapersPlugin plugin, ItemManager itemManager, AnalyzedItem item,
+    public ItemCardBox(QuantScapersPlugin plugin, AnalyzedItem item,
                         AuditResult hist, boolean expandedInitially, boolean auditingInitially,
                         boolean tracked, Consumer<Boolean> onExpandToggle) {
         this.plugin = plugin;
@@ -84,7 +83,7 @@ public class ItemCardBox extends JPanel {
         setAlignmentX(LEFT_ALIGNMENT);
         setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
-        JPanel header = buildHeader(itemManager);
+        JPanel header = buildHeader();
         MouseAdapter toggleListener = new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -157,25 +156,12 @@ public class ItemCardBox extends JPanel {
         }
     }
 
-    private JPanel buildHeader(ItemManager itemManager) {
+    private JPanel buildHeader() {
         JPanel header = new JPanel(new BorderLayout(6, 2));
         header.setOpaque(true);
         header.setBackground(QSColors.BG);
         header.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
         header.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel icon = new JLabel();
-        // OSRS item sprites render on a 36x32 canvas and aren't all square - a
-        // smaller fixed box (previously 20x20) clipped anything wider or taller
-        // than that, which is most two-handed weapons and many other items.
-        icon.setPreferredSize(new Dimension(36, 32));
-        icon.setHorizontalAlignment(JLabel.CENTER);
-        icon.setVerticalAlignment(JLabel.CENTER);
-        try {
-            itemManager.getImage(item.getId()).addTo(icon);
-        } catch (Exception ignored) {
-            // icon best-effort; card still works without it
-        }
 
         JLabel name = new JLabel(item.getName());
         name.setFont(FontManager.getRunescapeBoldFont());
@@ -195,7 +181,6 @@ public class ItemCardBox extends JPanel {
 
         JPanel titleRow = new JPanel(new BorderLayout(4, 0));
         titleRow.setOpaque(false);
-        titleRow.add(icon, BorderLayout.WEST);
         titleRow.add(name, BorderLayout.CENTER);
         titleRow.add(chevron, BorderLayout.EAST);
 

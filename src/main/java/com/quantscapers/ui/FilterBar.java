@@ -263,84 +263,16 @@ public class FilterBar extends JPanel {
         grid.setOpaque(false);
         grid.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 0));
 
-        style(budgetCombo);
-        budgetCombo.addActionListener(e -> {
-            if (syncing) return;
-            setConfig("maxBuyPrice", budgetCombo.getSelectedItem());
-        });
+        bindConfig(budgetCombo, "maxBuyPrice");
+        bindConfig(profitCombo, "minProfit");
+        bindConfig(roiCombo, "minROI");
+        bindConfig(fillCombo, "maxFillTime");
 
-        style(profitCombo);
-        profitCombo.addActionListener(e -> {
-            if (syncing) return;
-            setConfig("minProfit", profitCombo.getSelectedItem());
-        });
+        JButton savePresetBtn = presetButton("Save Preset");
+        savePresetBtn.addActionListener(e -> saveCustomPreset());
 
-        style(roiCombo);
-        roiCombo.addActionListener(e -> {
-            if (syncing) return;
-            setConfig("minROI", roiCombo.getSelectedItem());
-        });
-
-        style(fillCombo);
-        fillCombo.addActionListener(e -> {
-            if (syncing) return;
-            setConfig("maxFillTime", fillCombo.getSelectedItem());
-        });
-
-        JButton savePresetBtn = new JButton("Save Preset");
-        savePresetBtn.setFont(FontManager.getRunescapeSmallFont());
-        savePresetBtn.setForeground(QSColors.SLATE_200);
-        savePresetBtn.setBackground(QSColors.BG_DEEP);
-        savePresetBtn.setBorder(new LineBorder(QSColors.BORDER, 1));
-        savePresetBtn.setFocusPainted(false);
-        savePresetBtn.addActionListener(e -> {
-            String name = javax.swing.JOptionPane.showInputDialog(this, "Enter preset name:", "Save Custom Preset", javax.swing.JOptionPane.PLAIN_MESSAGE);
-            if (name != null && !name.trim().isEmpty()) {
-                name = name.trim();
-                if ("Quick trades".equalsIgnoreCase(name) || "High budget".equalsIgnoreCase(name) || "High yield".equalsIgnoreCase(name) || "Preset...".equalsIgnoreCase(name)) {
-                    javax.swing.JOptionPane.showMessageDialog(this, "Cannot overwrite built-in presets.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-                CustomPreset cp = new CustomPreset(
-                    name,
-                    plugin.getConfig().maxBuyPrice().name(),
-                    plugin.getConfig().minProfit().name(),
-                    plugin.getConfig().minROI().name(),
-                    plugin.getConfig().maxFillTime().name()
-                );
-                customPresets.put(name, cp);
-                saveCustomPresets();
-                syncFromConfig();
-            }
-        });
-
-        JButton deletePresetBtn = new JButton("Delete Preset");
-        deletePresetBtn.setFont(FontManager.getRunescapeSmallFont());
-        deletePresetBtn.setForeground(QSColors.SLATE_200);
-        deletePresetBtn.setBackground(QSColors.BG_DEEP);
-        deletePresetBtn.setBorder(new LineBorder(QSColors.BORDER, 1));
-        deletePresetBtn.setFocusPainted(false);
-        deletePresetBtn.addActionListener(e -> {
-            List<String> options = new ArrayList<>(customPresets.keySet());
-            if (options.isEmpty()) {
-                javax.swing.JOptionPane.showMessageDialog(this, "No custom presets to delete.", "Delete Preset", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-            String selected = (String) javax.swing.JOptionPane.showInputDialog(
-                this,
-                "Select preset to delete:",
-                "Delete Preset",
-                javax.swing.JOptionPane.PLAIN_MESSAGE,
-                null,
-                options.toArray(),
-                options.get(0)
-            );
-            if (selected != null) {
-                customPresets.remove(selected);
-                saveCustomPresets();
-                syncFromConfig();
-            }
-        });
+        JButton deletePresetBtn = presetButton("Delete Preset");
+        deletePresetBtn.addActionListener(e -> deleteCustomPreset());
 
         grid.add(labeledCombo("Budget", budgetCombo));
         grid.add(labeledCombo("Min Profit", profitCombo));
@@ -349,6 +281,71 @@ public class FilterBar extends JPanel {
         grid.add(labeledButton("Custom preset", savePresetBtn));
         grid.add(labeledButton("Custom preset", deletePresetBtn));
         return grid;
+    }
+
+    private void bindConfig(JComboBox<?> combo, String key) {
+        style(combo);
+        combo.addActionListener(e -> {
+            if (!syncing) setConfig(key, combo.getSelectedItem());
+        });
+    }
+
+    private static JButton presetButton(String text) {
+        JButton button = new JButton(text);
+        button.setFont(FontManager.getRunescapeSmallFont());
+        button.setForeground(QSColors.SLATE_200);
+        button.setBackground(QSColors.BG_DEEP);
+        button.setBorder(new LineBorder(QSColors.BORDER, 1));
+        button.setFocusPainted(false);
+        return button;
+    }
+
+    private void saveCustomPreset() {
+        String name = javax.swing.JOptionPane.showInputDialog(
+            this, "Enter preset name:", "Save Custom Preset", javax.swing.JOptionPane.PLAIN_MESSAGE);
+        if (name == null || name.trim().isEmpty()) return;
+        name = name.trim();
+        if (isBuiltInPreset(name)) {
+            javax.swing.JOptionPane.showMessageDialog(
+                this, "Cannot overwrite built-in presets.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        customPresets.put(name, new CustomPreset(
+            name,
+            plugin.getConfig().maxBuyPrice().name(),
+            plugin.getConfig().minProfit().name(),
+            plugin.getConfig().minROI().name(),
+            plugin.getConfig().maxFillTime().name()));
+        saveCustomPresets();
+        syncFromConfig();
+    }
+
+    private static boolean isBuiltInPreset(String name) {
+        return "Quick trades".equalsIgnoreCase(name)
+            || "High budget".equalsIgnoreCase(name)
+            || "High yield".equalsIgnoreCase(name)
+            || "Preset...".equalsIgnoreCase(name);
+    }
+
+    private void deleteCustomPreset() {
+        List<String> options = new ArrayList<>(customPresets.keySet());
+        if (options.isEmpty()) {
+            javax.swing.JOptionPane.showMessageDialog(
+                this, "No custom presets to delete.", "Delete Preset", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        String selected = (String) javax.swing.JOptionPane.showInputDialog(
+            this,
+            "Select preset to delete:",
+            "Delete Preset",
+            javax.swing.JOptionPane.PLAIN_MESSAGE,
+            null,
+            options.toArray(),
+            options.get(0));
+        if (selected == null) return;
+        customPresets.remove(selected);
+        saveCustomPresets();
+        syncFromConfig();
     }
 
     /** Caption sits above the combo so the filter's identity survives collapsing back to just its value. */

@@ -23,7 +23,6 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.FontManager;
 
 /**
@@ -36,16 +35,14 @@ import net.runelite.client.ui.FontManager;
 public class VaultBox extends JPanel {
 
     private final QuantScapersPlugin plugin;
-    private final ItemManager itemManager;
     private boolean collapsed;
     private List<TrackedTrade> lastVault = java.util.Collections.emptyList();
     private Map<Integer, PriceQuote> lastLive = java.util.Collections.emptyMap();
     private Map<Integer, AuditResult> lastAudits = java.util.Collections.emptyMap();
     private Map<Integer, AnalyzedItem> lastAnalyzed = java.util.Collections.emptyMap();
 
-    public VaultBox(QuantScapersPlugin plugin, ItemManager itemManager) {
+    public VaultBox(QuantScapersPlugin plugin) {
         this.plugin = plugin;
-        this.itemManager = itemManager;
         this.collapsed = plugin.getConfig().vaultCollapsed();
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setOpaque(false);
@@ -137,17 +134,7 @@ public class VaultBox extends JPanel {
             BorderFactory.createMatteBorder(0, 3, 0, 0, QSColors.VIOLET_500),
             BorderFactory.createEmptyBorder(8, 8, 8, 8)));
 
-        JLabel icon = new JLabel();
-        icon.setPreferredSize(new Dimension(36, 32));
-        icon.setHorizontalAlignment(JLabel.CENTER);
-        icon.setVerticalAlignment(JLabel.CENTER);
-        try {
-            itemManager.getImage(t.getId()).addTo(icon);
-        } catch (Exception ignored) {
-            // icon best-effort
-        }
-
-        JLabel name = new JLabel("<html><body style='width:" + (UiConstants.CARD_TEXT_WIDTH_PX - 30)
+        JLabel name = new JLabel("<html><body style='width:" + UiConstants.CARD_TEXT_WIDTH_PX
             + "px'>" + escape(t.getName()) + "</body></html>");
         name.setFont(FontManager.getRunescapeBoldFont());
         name.setForeground(QSColors.SLATE_200);
@@ -160,7 +147,6 @@ public class VaultBox extends JPanel {
         JPanel titleRow = new JPanel(new BorderLayout(6, 0));
         titleRow.setOpaque(false);
         titleRow.setAlignmentX(LEFT_ALIGNMENT);
-        titleRow.add(icon, BorderLayout.WEST);
         titleRow.add(name, BorderLayout.CENTER);
         titleRow.add(untrack, BorderLayout.EAST);
         content.add(titleRow);

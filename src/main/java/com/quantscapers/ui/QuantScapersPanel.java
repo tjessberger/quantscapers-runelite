@@ -30,7 +30,6 @@ import javax.swing.Scrollable;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.Timer;
 import javax.swing.border.LineBorder;
-import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.PluginErrorPanel;
@@ -42,7 +41,6 @@ import net.runelite.client.ui.components.PluginErrorPanel;
 public class QuantScapersPanel extends PluginPanel {
 
     private final QuantScapersPlugin plugin;
-    private final ItemManager itemManager;
 
     private final HeaderBar headerBar;
     private final SiteLinksBar siteLinksBar;
@@ -80,15 +78,14 @@ public class QuantScapersPanel extends PluginPanel {
     private Timer countdownTimer;
     private int countdown = Constants.HEARTBEAT_SECONDS;
 
-    public QuantScapersPanel(QuantScapersPlugin plugin, ItemManager itemManager) {
+    public QuantScapersPanel(QuantScapersPlugin plugin) {
         super(false);
         this.plugin = plugin;
-        this.itemManager = itemManager;
 
         setLayout(new BorderLayout(0, 6));
         setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
-        headerBar = new HeaderBar(this::onManualRefresh);
+        headerBar = new HeaderBar();
         siteLinksBar = new SiteLinksBar();
         tabBar = new PluginTabBar(this::showTab);
         filterBar = new FilterBar(plugin);
@@ -96,7 +93,7 @@ public class QuantScapersPanel extends PluginPanel {
         topPicksBox.addPropertyChangeListener("auditComplete", e -> refreshAuditsAndRerender());
         marketPulseBox = new MarketPulseBox(this::openInScanner);
 
-        vaultBox = new VaultBox(plugin, itemManager);
+        vaultBox = new VaultBox(plugin);
         vaultBox.addPropertyChangeListener("untrack", e -> plugin.untrack((Integer) e.getNewValue()));
         vaultBox.addPropertyChangeListener("auditComplete", e -> refreshAuditsAndRerender());
 
@@ -187,12 +184,6 @@ public class QuantScapersPanel extends PluginPanel {
         for (ItemCardBox card : liveCards) {
             card.refreshAges(now);
         }
-    }
-
-    private void onManualRefresh() {
-        countdown = Constants.HEARTBEAT_SECONDS;
-        headerBar.setCountdown(countdown);
-        plugin.requestImmediateRefresh();
     }
 
     private void showTab(PluginTabBar.Tab tab) {
@@ -312,7 +303,7 @@ public class QuantScapersPanel extends PluginPanel {
             boolean expanded = expandedIds.contains(item.getId());
             boolean auditing = auditingIds.contains(item.getId());
             boolean tracked = trackedIds.contains(item.getId());
-            ItemCardBox card = new ItemCardBox(plugin, itemManager, item, lastAuditCache.get(item.getId()),
+            ItemCardBox card = new ItemCardBox(plugin, item, lastAuditCache.get(item.getId()),
                 expanded, auditing, tracked, isExpanded -> {
                     if (isExpanded) expandedIds.add(item.getId());
                     else expandedIds.remove(item.getId());

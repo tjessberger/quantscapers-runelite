@@ -20,7 +20,7 @@ import javax.swing.JPanel;
 import javax.swing.border.LineBorder;
 import net.runelite.client.ui.FontManager;
 
-/** Top three trade candidates ranked by GP/hour, auto-audited. Hidden when empty. */
+/** Top three trade candidates ranked by GP/hour. Hidden when empty. */
 public class TopPicksBox extends JPanel {
 
     private final QuantScapersPlugin plugin;

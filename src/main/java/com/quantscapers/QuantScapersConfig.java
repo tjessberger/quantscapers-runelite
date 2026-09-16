@@ -11,7 +11,7 @@ public interface QuantScapersConfig extends Config {
         K100("100k", 100_000), K250("250k", 250_000), K500("500k", 500_000),
         M1("1M", 1_000_000), M5("5M", 5_000_000), M10("10M", 10_000_000),
         M50("50M", 50_000_000), M100("100M", 100_000_000), M500("500M", 500_000_000),
-        MAX("Max", Integer.MAX_VALUE);
+        MAX("Max", Long.MAX_VALUE);
 
         private final String label;
         private final long value;

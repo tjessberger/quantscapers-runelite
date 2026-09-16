@@ -13,12 +13,8 @@ public final class Constants {
     public static final long QUOTE_STALE_SEC = 2700; // 45 min, matches web/worker as of 2026-07-17
     public static final long AUDIT_TTL_MS = 3_600_000; // 1 h
     public static final long FAILED_AUDIT_RETRY_MS = 300_000; // 5 min
-    public static final long AUTO_AUDIT_WINDOW_MS = 1_800_000; // 30 min
-    public static final int AUTO_AUDIT_MAX_CALLS = 3; // NEVER raise
-    // Manual "Audit" button clicks were previously uncapped (serialized by
-    // auditInFlight, but not rate-limited) - a user clicking Audit across many
-    // cards in a row could fire unlimited timeseries calls. Separate budget from
-    // the auto-audit one so Top Picks auditing is never starved by manual use.
+    // User-requested audits are serialized and capped to prevent repeated card
+    // clicks from producing an unbounded number of timeseries requests.
     public static final long MANUAL_AUDIT_WINDOW_MS = 600_000; // 10 min
     public static final int MANUAL_AUDIT_MAX_CALLS = 10;
     public static final int MAX_CARDS_RENDERED = 50; // Swing perf cap

@@ -25,6 +25,12 @@ public final class VerdictEngine {
         return age != null && age > Constants.QUOTE_STALE_SEC;
     }
 
+    /** Missing timestamps are not stale, but they are not fresh enough for recommendations either. */
+    public static boolean hasFreshQuotes(AnalyzedItem it) {
+        Long age = quoteAgeSec(it);
+        return age != null && age <= Constants.QUOTE_STALE_SEC;
+    }
+
     /** Manipulation heuristic: spread far wider than the item's own 24h norm, on thin volume. */
     public static boolean isPossibleTrap(AnalyzedItem it) {
         double avgSpread = it.getAvg24hHigh() - it.getAvg24hLow();
@@ -41,7 +47,7 @@ public final class VerdictEngine {
         return it.getEft() <= 90
             && it.getRealisticProfit() >= 500_000
             && it.getRoi() >= 2
-            && !isStaleQuote(it)
+            && hasFreshQuotes(it)
             && !isPossibleTrap(it);
     }
 
@@ -62,8 +68,8 @@ public final class VerdictEngine {
             return new Signal("Price bubble, avoid", QSColors.RED_400);
         }
 
-        if (it.getVol5m() != null && it.getVol5m() > 0 && it.getAvg5mHigh() > 0 && it.getAvg24hHigh() > 0) {
-            double shift = ((it.getAvg5mHigh() / it.getAvg24hHigh()) - 1) * 100;
+        Double shift = momentumShiftPct(it);
+        if (shift != null) {
             if (shift > 2) {
                 return new Signal(String.format("Heating up +%.1f%%", shift), QSColors.EMERALD_400);
             } else if (shift < -2) {
@@ -76,57 +82,86 @@ public final class VerdictEngine {
 
     /** hist may be null when the item has never been audited. */
     public static Verdict verdict(AnalyzedItem it, AuditResult hist) {
-        if (isPossibleTrap(it)) {
-            return avoid("Spread is far above this item's normal range. Possible price manipulation.");
-        }
-        if (isStaleQuote(it)) {
-            return avoid("Quotes are over 45 min old. This margin may no longer exist.");
-        }
-        if (it.getRoi() <= 0 || it.getRealisticProfit() <= 0) {
-            return avoid("No profit left after tax at current prices.");
-        }
+        Verdict blocked = blockingVerdict(it);
+        if (blocked != null) return blocked;
 
         Long age = quoteAgeSec(it);
-        boolean cooling = it.getVol5m() != null && it.getVol5m() > 0
-            && it.getAvg5mHigh() > 0 && it.getAvg24hHigh() > 0
-            && ((it.getAvg5mHigh() / it.getAvg24hHigh()) - 1) * 100 < -2;
-
-        String flag = null;
-        if (it.getEft() > 240) {
-            flag = "Slow fill. About " + Math.round(it.getEft() / 60) + "h per side";
-        } else if (hist != null && hist.getStabilityGrade() != null
-            && (hist.getStabilityGrade() == 'D' || hist.getStabilityGrade() == 'F')) {
-            flag = "Margin unstable this week (grade " + hist.getStabilityGrade() + ")";
-        } else if (hist != null && hist.getLikelihood() > 0 && hist.getLikelihood() < 30) {
-            flag = "Sell price rarely reached (" + hist.getLikelihood() + "% hit rate)";
-        } else if (cooling) {
-            flag = "Price is cooling off versus its 24h average";
-        } else if (it.getVol5m() != null && it.getVol5m() == 0) {
-            flag = "No trades in the last 5 minutes";
-        } else if (age != null && age > 600) {
-            flag = "Quotes are aging. Verify before committing";
-        }
+        String flag = riskFlag(it, hist, age);
         if (flag != null) {
             return new Verdict(Verdict.Rating.RISKY, flag + ".", QSColors.AMBER_400, QSColors.BORDER_AMBER);
         }
 
-        boolean fresh = age != null && age <= 300 && it.getEft() <= 40 && it.getRoi() >= 2
-            && (hist == null || hist.getLikelihood() >= 50);
-        if (fresh) {
+        if (isStrongBuy(it, hist, age)) {
             String auditNote = hist != null ? ", " + hist.getLikelihood() + "% sell-price hit rate" : "";
             String reason = String.format("Fresh quotes, ~%d min fill per side, %.1f%% after tax%s.",
                 Math.round(it.getEft()), it.getRoi(), auditNote);
             return new Verdict(Verdict.Rating.BUY, reason, QSColors.EMERALD_400, QSColors.BORDER_EMERALD);
         }
 
-        String whyNot = (age == null || age > 300) ? "quotes are not fully fresh"
-            : it.getEft() > 40 ? "fill is slower" : "ROI is thin";
         String reason = String.format("%.1f%% after tax, ~%d min fill per side, %s.",
-            it.getRoi(), Math.round(it.getEft()), whyNot);
+            it.getRoi(), Math.round(it.getEft()), whyNotBuy(it, age));
         return new Verdict(Verdict.Rating.DECENT, reason, QSColors.SLATE_200, QSColors.BORDER);
     }
 
     private static Verdict avoid(String reason) {
         return new Verdict(Verdict.Rating.AVOID, reason, QSColors.RED_400, QSColors.BORDER_RED);
+    }
+
+    private static Verdict blockingVerdict(AnalyzedItem item) {
+        if (isPossibleTrap(item)) {
+            return avoid("Spread is far above this item's normal range. Possible price manipulation.");
+        }
+        if (isStaleQuote(item)) {
+            return avoid("Quotes are over " + Constants.QUOTE_STALE_SEC / 60
+                + " min old. This margin may no longer exist.");
+        }
+        if (item.getRoi() <= 0 || item.getRealisticProfit() <= 0) {
+            return avoid("No profit left after tax at current prices.");
+        }
+        return null;
+    }
+
+    private static boolean isStrongBuy(AnalyzedItem item, AuditResult audit, Long age) {
+        return age != null && age <= 300 && item.getEft() <= 40 && item.getRoi() >= 2
+            && (audit == null || audit.getLikelihood() >= 50);
+    }
+
+    private static String whyNotBuy(AnalyzedItem item, Long age) {
+        if (age == null || age > 300) return "quotes are not fully fresh";
+        return item.getEft() > 40 ? "fill is slower" : "ROI is thin";
+    }
+
+    private static String riskFlag(AnalyzedItem item, AuditResult audit, Long age) {
+        if (item.getEft() > 240) {
+            return "Slow fill. About " + Math.round(item.getEft() / 60) + "h per side";
+        }
+        if (hasUnstableMargin(audit)) {
+            return "Margin unstable this week (grade " + audit.getStabilityGrade() + ")";
+        }
+        if (hasLowHitRate(audit)) {
+            return "Sell price rarely reached (" + audit.getLikelihood() + "% hit rate)";
+        }
+        Double shift = momentumShiftPct(item);
+        if (shift != null && shift < -2) return "Price is cooling off versus its 24h average";
+        if (item.getVol5m() != null && item.getVol5m() == 0) return "No trades in the last 5 minutes";
+        if (age != null && age > 600) return "Quotes are aging. Verify before committing";
+        return null;
+    }
+
+    private static boolean hasUnstableMargin(AuditResult audit) {
+        if (audit == null || audit.getStabilityGrade() == null) return false;
+        return audit.getStabilityGrade() == 'D' || audit.getStabilityGrade() == 'F';
+    }
+
+    private static boolean hasLowHitRate(AuditResult audit) {
+        return audit != null && audit.getLikelihood() > 0 && audit.getLikelihood() < 30;
+    }
+
+    private static Double momentumShiftPct(AnalyzedItem item) {
+        if (item.getVol5m() == null || item.getVol5m() <= 0
+            || item.getAvg5mHigh() <= 0 || item.getAvg24hHigh() <= 0) {
+            return null;
+        }
+        return ((item.getAvg5mHigh() / item.getAvg24hHigh()) - 1) * 100;
     }
 }

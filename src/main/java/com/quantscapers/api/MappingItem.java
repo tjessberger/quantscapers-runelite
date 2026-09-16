@@ -1,6 +1,5 @@
 package com.quantscapers.api;
 
-import com.google.gson.annotations.SerializedName;
 import lombok.Data;
 
 /**
@@ -13,9 +12,6 @@ public class MappingItem {
     private String name;
     private Integer limit;
     private Integer highalch;
-
-    @SerializedName("members")
-    private boolean members;
 
     public int limitOrZero() {
         return limit == null ? 0 : limit;

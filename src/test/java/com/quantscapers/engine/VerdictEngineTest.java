@@ -56,6 +56,8 @@ public class VerdictEngineTest {
         AnalyzedItem it = base().highTime(0).lowTime(NOW_SEC - 2800).build();
         assertNull(VerdictEngine.quoteAgeSec(it));
         assertFalse(VerdictEngine.isStaleQuote(it));
+        assertFalse(VerdictEngine.hasFreshQuotes(it));
+        assertFalse(VerdictEngine.isBestBet(it));
     }
 
     @Test

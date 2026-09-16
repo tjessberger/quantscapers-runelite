@@ -1,49 +1,46 @@
 # QuantScapers
 
-An in-client **OSRS Market Intelligence tool** for RuneLite.
+QuantScapers helps you find Grand Exchange flips and alch opportunities
+without automating trades. See what's moving, check an item's margin and price
+history, and save items to a local watchlist.
 
-QuantScapers helps you understand the Grand Exchange before you act: read
-liquid market movers, research individual items, evaluate trade and alchemy
-opportunities, and keep a local Watchlist of prices that matter to you.
-
-| Market Overview | Scanner | Watchlist |
+| Market overview | Scanner | Watchlist |
 | --- | --- | --- |
-| ![Market Overview](screenshots/overview.png) | ![Scanner](screenshots/scanner.png) | ![Watchlist](screenshots/watchlist.png) |
+| ![Market overview](screenshots/overview.png) | ![Scanner](screenshots/scanner.png) | ![Watchlist](screenshots/watchlist.png) |
 
 ## What you can do
 
-- **Start with market context.** The default Overview is a local Market
-  Intelligence view: it summarizes whether liquid markets are broadly
-  rising, falling, or mixed, then surfaces liquid movers, heating/cooling
-  momentum, and the most-traded items. Click any signal to hand it to Scanner
-  for execution details. Set minimum trade volume, item value, and movement
--  thresholds directly above the panel to remove low-signal noise. It adds
-  context alongside dedicated execution tools.
-- **Find opportunities.** Use the Scanner to evaluate trade candidates
-  using profit, ROI, budget, fill-time, volume, and freshness filters. Each item
-  receives a clear BUY, DECENT, RISKY, or AVOID verdict with an explanation.
-- **Evaluate alchemy.** Switch to Alch View to rank high-alchemy opportunities by
-  profit, ROI, or GP per hour using the same scheduled price snapshot.
-- **Research items.** Search the current market by item name, expand an item
-  for its price details and trade ticket, or run a price history audit.
-- **Keep a Watchlist.** Track up to 25 items locally, compare prices and
-  margin now against when you saved them, and audit a saved item directly.
-- **Open the website.** The in-plugin `QUANTSCAPERS.COM` menu links to
-  the market overview, item table, and gear indices. Follow
-  [@Quantscapers on X](https://x.com/Quantscapers) for updates.
+- **See what's moving.** Overview shows whether the market is rising, falling,
+  or mixed, along with active items and recent momentum. You can filter out
+  low-volume or low-value noise and send any item straight to Scanner.
+- **Find a flip.** Scanner ranks items by profit, ROI, budget, fill time,
+  volume, and price freshness. Each result explains why it looks worth buying
+  or why you may want to avoid it.
+- **Check alch opportunities.** Alch View ranks items by profit, ROI, or GP per
+  hour using the same price snapshot.
+- **Look into an item.** Search by name, open its price details and trade
+  ticket, or request an hourly price-history audit.
+- **Save items for later.** Your local Watchlist holds up to 25 items and shows
+  how their prices and margins have changed since you saved them.
+- **Jump to the website.** The `QUANTSCAPERS.COM` menu opens our market pages
+  and gear indices. Updates are posted at
+  [@Quantscapers on X](https://x.com/Quantscapers).
 
 ## How it works
 
-QuantScapers is decision support, not automation.
+QuantScapers does not place trades. It gives you the numbers and leaves the
+decision to you.
 
-- **Order tickets** provide buy price, sell price, quantity, after-tax profit,
-  and a walk-away timer for you to enter manually.
-- **Trust guards** flag stale quotes, possible price manipulation, and cooling
-  momentum before a candidate is presented for execution.
-- **Price history audits** use an item's hourly history to calculate sell-price
-  hit rate and a seven-day margin-stability grade.
-- **Notifications** are optional and can be limited to trade candidates, Alch
-  candidates, or both.
+- Trade tickets show what to buy, what to sell for, how many to trade, and the
+  expected profit after tax. A walk-away timer helps keep old ideas from
+  hanging around too long.
+- Stale prices, unusually wide spreads, and cooling momentum are called out
+  before you act.
+- When you request an audit, QuantScapers checks the item's hourly price
+  history to see how often the target sell price was reached and how steady
+  the margin has been over the past week.
+- Notifications are optional. You can use them for flips, alch opportunities,
+  or both.
 
 ## Data source and privacy
 
@@ -59,8 +56,8 @@ QuantScapers uses the [OSRS Wiki Real-time Prices API](https://prices.runescape.
 - Five-minute and 24-hour statistics are cached for five minutes, and the item
   mapping is cached for 24 hours. Transient API failures trigger capped
   exponential backoff.
-- Price history audits run on demand or for top trade candidates, with the
-  automatic audit budget capped at three calls per 30 minutes.
+- Price history audits run only when you request one and are capped at ten
+  calls per ten minutes.
 - Every request includes a fixed descriptive User-Agent linking to the public
   GitHub issue tracker; no personal email is requested. The Wiki API receives
   your IP address as normal HTTP metadata.

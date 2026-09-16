@@ -17,7 +17,6 @@ import com.quantscapers.engine.MarketAnalyzer;
 import com.quantscapers.engine.SuppressionEngine;
 import com.quantscapers.engine.TrackedTrade;
 import com.quantscapers.engine.VaultPruner;
-import com.quantscapers.engine.Verdict;
 import com.quantscapers.engine.VerdictEngine;
 import com.quantscapers.ui.QuantScapersPanel;
 import java.awt.Dimension;
@@ -49,7 +48,6 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.OverlayMenuClicked;
-import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
@@ -69,7 +67,6 @@ import okhttp3.OkHttpClient;
 public class QuantScapersPlugin extends Plugin {
 
     @Inject private ClientToolbar clientToolbar;
-    @Inject private ItemManager itemManager;
     @Inject private OkHttpClient okHttpClient;
     @Inject private ScheduledExecutorService executor;
     @Inject private ConfigManager configManager;
@@ -99,9 +96,7 @@ public class QuantScapersPlugin extends Plugin {
     // Written on the executor thread, read on the EDT via a snapshot taken at
     // render time (never hand the live map to Swing - see renderCurrentState()).
     private final Map<Integer, AuditResult> auditCache = new ConcurrentHashMap<>();
-    private final AutoAuditBudget autoAuditBudget = new AutoAuditBudget();
-    // Separate budget/window from autoAuditBudget - see tryConsumeManualAuditBudget().
-    private final AutoAuditBudget manualAuditBudget = new AutoAuditBudget();
+    private final AuditBudget manualAuditBudget = new AuditBudget();
 
     // Same discipline as auditCache - written on the executor thread, only ever
     // handed to Swing as a snapshot copy taken at render time.
@@ -119,7 +114,6 @@ public class QuantScapersPlugin extends Plugin {
     // session-alert behavior: this is "newest to your view", not "newest on the wiki".
     // Session-only by design (never persisted) - persisting it would make everything
     // look equally old after a restart, defeating the point of the sort.
-    private final Set<Integer> seenFilterPoolIds = ConcurrentHashMap.newKeySet();
     private final Map<Integer, Long> firstSeenMs = new ConcurrentHashMap<>();
 
     private volatile List<AnalyzedItem> lastAnalyzed = new ArrayList<>();
@@ -132,12 +126,12 @@ public class QuantScapersPlugin extends Plugin {
     private volatile long lastAnalysisMs = 0;
     // Below this age, any trigger (manual refresh, panel re-open, config event)
     // re-renders from the last analysis instead of refetching from the wiki.
-    private static final long FRESH_ENOUGH_MS = 10_000; // 10 seconds
+    private static final long FRESH_ENOUGH_MS = 60_000; // NEVER lower: Wiki API request floor
 
     @Override
     protected void startUp() {
         client = new WikiPricesClient(okHttpClient, gson);
-        panel = new QuantScapersPanel(this, itemManager);
+        panel = new QuantScapersPanel(this);
         loadPersistedAuditCache();
         loadPersistedVault();
         loadPersistedSuppressed();
@@ -150,7 +144,6 @@ public class QuantScapersPlugin extends Plugin {
             .panel(panel)
             .build();
         clientToolbar.addNavigation(navButton);
-        clientToolbar.openPanel(navButton);
 
         tickFuture = executor.scheduleWithFixedDelay(this::tick, 0, Constants.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
     }
@@ -172,7 +165,7 @@ public class QuantScapersPlugin extends Plugin {
         executor.execute(this::tick);
     }
 
-    /** Runs a price history audit for one item, off the auto-audit budget. onComplete fires on the EDT. */
+    /** Runs a user-requested price history audit. onComplete fires on the EDT. */
     public void requestAudit(AnalyzedItem item, Runnable onComplete) {
         executor.execute(() -> {
             if (!isWikiDataDisabled() && tryConsumeManualAuditBudget()) {
@@ -316,65 +309,72 @@ public class QuantScapersPlugin extends Plugin {
             return;
         }
         try {
-            // Hidden panels make no network requests. onActivate() requests a fresh tick.
-            if (panel == null || !panel.isShowing()) {
-                return;
-            }
-
-            // Third-party Wiki access is explicit and disabled by default.
-            if (isWikiDataDisabled()) {
-                SwingUtilities.invokeLater(panel::showWikiDataGate);
-                return;
-            }
-
-            long now = System.currentTimeMillis();
-            if (lastAnalysisMs > 0 && now - lastAnalysisMs < FRESH_ENOUGH_MS) {
-                renderCurrentState();
-                return;
-            }
-
-            List<MappingItem> mapping = client.fetchMapping();
-            LatestResponse latestResp = client.fetchLatest();
-            StatsResponse stats24hResp = client.fetch24h();
-            if (mapping == null || latestResp == null || stats24hResp == null
-                || latestResp.getData() == null || stats24hResp.getData() == null) {
-                throw new IOException("QuantScapers: incomplete market response");
-            }
-            StatsResponse stats5mResp = null;
-            try {
-                stats5mResp = client.fetch5m();
-            } catch (IOException e) {
-                log.debug("QuantScapers: 5m feed unavailable this tick", e);
-            }
-
-            Map<Integer, PriceQuote> latest = latestResp.getData();
-            Map<Integer, VolumeStats> stats24h = stats24hResp.getData();
-            Map<Integer, VolumeStats> stats5m = stats5mResp == null ? null : stats5mResp.getData();
-            int natureRuneGp = MarketAnalyzer.extractNatureRuneGp(latest);
-
-            List<AnalyzedItem> analyzed = MarketAnalyzer.analyze(mapping, latest, stats24h, stats5m, natureRuneGp, now);
-            lastAnalyzed = analyzed;
-            lastLatest = latest;
-            lastAnalysisMs = now;
-
-            pruneVault(latest, now);
-
-            checkNotifications(analyzed);
-
-            // Render fresh prices immediately - don't make the user wait on up to
-            // 3 blocking timeseries fetches before seeing anything update.
-            renderCurrentState();
-
-            boolean audited = runAutoAudit(computeTopPicks(analyzed), analyzed);
-            boolean suppressionChanged = updateSuppression(analyzed, now);
-            if (audited || suppressionChanged) {
-                renderCurrentState();
-            }
+            refreshVisiblePanel();
         } catch (Exception e) {
             log.warn("QuantScapers: market sync failed", e);
             SwingUtilities.invokeLater(() -> panel.showSyncError());
         } finally {
             polling.set(false);
+        }
+    }
+
+    private void refreshVisiblePanel() throws IOException {
+        // Hidden panels make no network requests. onActivate() requests a fresh tick.
+        if (panel == null || !panel.isShowing()) return;
+
+        // Third-party Wiki access is explicit and disabled by default.
+        if (isWikiDataDisabled()) {
+            SwingUtilities.invokeLater(panel::showWikiDataGate);
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        if (lastAnalysisMs > 0 && now - lastAnalysisMs < FRESH_ENOUGH_MS) {
+            renderCurrentState();
+            return;
+        }
+
+        List<AnalyzedItem> analyzed = fetchMarket(now);
+        checkNotifications(analyzed);
+
+        renderCurrentState();
+
+        boolean suppressionChanged = updateSuppression(analyzed, now);
+        if (suppressionChanged) renderCurrentState();
+    }
+
+    private List<AnalyzedItem> fetchMarket(long now) throws IOException {
+        List<MappingItem> mapping = client.fetchMapping();
+        LatestResponse latestResponse = client.fetchLatest();
+        StatsResponse stats24hResponse = client.fetch24h();
+        if (mapping == null || latestResponse == null || stats24hResponse == null
+            || latestResponse.getData() == null || stats24hResponse.getData() == null) {
+            throw new IOException("QuantScapers: incomplete market response");
+        }
+
+        StatsResponse stats5mResponse = fetchOptional5mStats();
+        Map<Integer, PriceQuote> latest = latestResponse.getData();
+        Map<Integer, VolumeStats> stats5m = stats5mResponse == null ? null : stats5mResponse.getData();
+        List<AnalyzedItem> analyzed = MarketAnalyzer.analyze(
+            mapping,
+            latest,
+            stats24hResponse.getData(),
+            stats5m,
+            MarketAnalyzer.extractNatureRuneGp(latest),
+            now);
+        lastAnalyzed = analyzed;
+        lastLatest = latest;
+        lastAnalysisMs = now;
+        pruneVault(latest, now);
+        return analyzed;
+    }
+
+    private StatsResponse fetchOptional5mStats() {
+        try {
+            return client.fetch5m();
+        } catch (IOException e) {
+            log.debug("QuantScapers: 5m feed unavailable this tick", e);
+            return null;
         }
     }
 
@@ -411,23 +411,22 @@ public class QuantScapersPlugin extends Plugin {
         if (vault.isEmpty()) {
             return;
         }
-        boolean changed = false;
+        boolean removed = false;
         for (Map.Entry<Integer, TrackedTrade> entry : vault.entrySet()) {
             TrackedTrade t = entry.getValue();
             if (VaultPruner.pastHardTtl(t, now)) {
                 vault.remove(entry.getKey());
-                changed = true;
+                removed = true;
                 continue;
             }
             if (VaultPruner.isQuoteHealthy(latest.get(t.getId()), now)) {
                 vault.put(entry.getKey(), t.toBuilder().lastSeenHealthyMs(now).build());
-                changed = true;
             } else if (VaultPruner.pastDeadGrace(t, now)) {
                 vault.remove(entry.getKey());
-                changed = true;
+                removed = true;
             }
         }
-        if (changed) {
+        if (removed) {
             persistVault();
         }
     }
@@ -466,57 +465,63 @@ public class QuantScapersPlugin extends Plugin {
         List<AnalyzedItem> passesUserFilters = new ArrayList<>();
         String activeSearch = searchTerm;
         for (AnalyzedItem it : analyzed) {
-            if (!activeSearch.isEmpty()
-                && !it.getName().toLowerCase(java.util.Locale.ROOT).contains(activeSearch)) continue;
-            if (it.getFullLimitCost() > maxBuyPrice) continue;
-            if (!isAlch && !fillCap.isAny() && it.getEft() > fillCap.minutes()) continue;
-            double roi = isAlch ? it.getAlchROI() : it.getRoi();
-            long profit = isAlch ? it.getAlchProfit() : it.getRealisticProfit();
-            if (roi < minROI) continue;
-            if (profit < minProfit) continue;
-            passesUserFilters.add(it);
+            if (passesFilters(it, activeSearch, maxBuyPrice, minProfit, minROI, fillCap, isAlch)) {
+                passesUserFilters.add(it);
+            }
         }
 
         trackFirstSeen(passesUserFilters);
+        FilterResult result = applySuppression(passesUserFilters, System.currentTimeMillis());
+        result.items.sort(comparatorFor(isAlch));
+        return result;
+    }
 
-        long now = System.currentTimeMillis();
+    private static boolean passesFilters(AnalyzedItem item, String search, long maxBuyPrice,
+                                         long minProfit, double minROI,
+                                         QuantScapersConfig.FillTimeCap fillCap, boolean isAlch) {
+        if (!search.isEmpty() && !item.getName().toLowerCase(java.util.Locale.ROOT).contains(search)) return false;
+        if (item.getFullLimitCost() > maxBuyPrice) return false;
+        if (!isAlch && !fillCap.isAny() && item.getEft() > fillCap.minutes()) return false;
+        double roi = isAlch ? item.getAlchROI() : item.getRoi();
+        long profit = isAlch ? item.getAlchProfit() : item.getRealisticProfit();
+        return roi >= minROI && profit >= minProfit;
+    }
+
+    private FilterResult applySuppression(List<AnalyzedItem> items, long now) {
         int suppressedCount = 0;
         List<AnalyzedItem> visible = new ArrayList<>();
-        for (AnalyzedItem it : passesUserFilters) {
-            if (isSuppressed(it.getId(), now)) {
-                suppressedCount++;
-                if (!showSuppressed) {
-                    continue;
-                }
-            }
-            visible.add(it);
+        for (AnalyzedItem item : items) {
+            boolean suppressed = isSuppressed(item.getId(), now);
+            if (suppressed) suppressedCount++;
+            if (!suppressed || showSuppressed) visible.add(item);
         }
+        return new FilterResult(visible, suppressedCount);
+    }
 
-        Comparator<AnalyzedItem> cmp;
+    private Comparator<AnalyzedItem> comparatorFor(boolean isAlch) {
+        Comparator<AnalyzedItem> comparator;
         switch (config.sortBy()) {
             case GP_HR:
-                cmp = Comparator.comparingDouble(isAlch ? AnalyzedItem::getAlchGpHour : AnalyzedItem::getGpHour).reversed();
+                comparator = Comparator.comparingDouble(isAlch ? AnalyzedItem::getAlchGpHour : AnalyzedItem::getGpHour).reversed();
                 break;
             case ROI:
-                cmp = Comparator.comparingDouble(isAlch ? AnalyzedItem::getAlchROI : AnalyzedItem::getRoi).reversed();
+                comparator = Comparator.comparingDouble(isAlch ? AnalyzedItem::getAlchROI : AnalyzedItem::getRoi).reversed();
                 break;
             case VOLUME:
-                cmp = Comparator.comparingLong(AnalyzedItem::getVol24h).reversed();
+                comparator = Comparator.comparingLong(AnalyzedItem::getVol24h).reversed();
                 break;
             case NEWEST:
-                cmp = Comparator.comparingLong(
+                comparator = Comparator.comparingLong(
                     (AnalyzedItem it) -> firstSeenMs.getOrDefault(it.getId(), 0L)).reversed();
                 break;
             case PROFIT:
             default:
-                cmp = Comparator.comparingLong(isAlch ? AnalyzedItem::getAlchProfit : AnalyzedItem::getRealisticProfit).reversed();
+                comparator = Comparator.comparingLong(isAlch ? AnalyzedItem::getAlchProfit : AnalyzedItem::getRealisticProfit).reversed();
                 break;
         }
         // Tiebreaker: always net profit descending.
-        cmp = cmp.thenComparing(Comparator.comparingLong(isAlch ? AnalyzedItem::getAlchProfit : AnalyzedItem::getRealisticProfit).reversed());
-        visible.sort(cmp);
-
-        return new FilterResult(visible, suppressedCount);
+        return comparator.thenComparing(Comparator.comparingLong(
+            isAlch ? AnalyzedItem::getAlchProfit : AnalyzedItem::getRealisticProfit).reversed());
     }
 
     /**
@@ -528,9 +533,7 @@ public class QuantScapersPlugin extends Plugin {
     private void trackFirstSeen(List<AnalyzedItem> pool) {
         long now = System.currentTimeMillis();
         for (AnalyzedItem it : pool) {
-            if (seenFilterPoolIds.add(it.getId())) {
-                firstSeenMs.putIfAbsent(it.getId(), now);
-            }
+            firstSeenMs.putIfAbsent(it.getId(), now);
         }
     }
 
@@ -577,54 +580,6 @@ public class QuantScapersPlugin extends Plugin {
             }
         }
         return snapshot;
-    }
-
-    /** Returns true if at least one audit actually wrote to auditCache (success or recorded failure). */
-    private boolean runAutoAudit(List<AnalyzedItem> topPicks, List<AnalyzedItem> analyzed) {
-        long now = System.currentTimeMillis();
-        if (now - autoAuditBudget.windowStartMs > Constants.AUTO_AUDIT_WINDOW_MS) {
-            autoAuditBudget.windowStartMs = now;
-            autoAuditBudget.count = 0;
-        }
-        boolean audited = false;
-        for (AnalyzedItem pick : topPicks) {
-            if (autoAuditBudget.count >= Constants.AUTO_AUDIT_MAX_CALLS) {
-                break;
-            }
-            AuditResult cached = auditCache.get(pick.getId());
-            if (isAuditUsable(cached, now)) {
-                continue;
-            }
-            autoAuditBudget.count++;
-            if (auditItemBlocking(pick)) {
-                audited = true;
-            }
-        }
-
-        // Leftover budget (most ticks, once Top Picks are cached, all 3 slots go unused):
-        // spend it confirming-or-clearing AVOID items currently visible in the leads list,
-        // highest-ranked first, so a bad lead gets resolved instead of sitting unaudited
-        // forever. Never exceeds the same hard per-window cap - no new budget is added.
-        if (autoAuditBudget.count < Constants.AUTO_AUDIT_MAX_CALLS) {
-            List<AnalyzedItem> visible = filterAndSort(analyzed).items;
-            for (AnalyzedItem item : visible) {
-                if (autoAuditBudget.count >= Constants.AUTO_AUDIT_MAX_CALLS) {
-                    break;
-                }
-                AuditResult cached = auditCache.get(item.getId());
-                if (isAuditUsable(cached, now)) {
-                    continue;
-                }
-                if (VerdictEngine.verdict(item, cached).getRating() != Verdict.Rating.AVOID) {
-                    continue;
-                }
-                autoAuditBudget.count++;
-                if (auditItemBlocking(item)) {
-                    audited = true;
-                }
-            }
-        }
-        return audited;
     }
 
     /** Returns false only when skipped because another audit was already in flight. */
@@ -769,42 +724,49 @@ public class QuantScapersPlugin extends Plugin {
         Set<Integer> currentTickMatches = new java.util.HashSet<>();
 
         for (AnalyzedItem it : analyzed) {
-            if (it.getFullLimitCost() > maxBuyPrice) {
-                continue;
-            }
-
-            // Notifications previously matched on profit/ROI alone, bypassing the same
-            // stale-quote/trap guards every verdict and Top Pick already respects - a
-            // manipulated spread (exactly what this plugin exists to catch) could fire
-            // a market-opportunity notification. Both trade and alch notifications now require
-            // passing these gates first, same as isBestBet/getVerdict.
-            if (VerdictEngine.isStaleQuote(it) || VerdictEngine.isPossibleTrap(it)) {
-                continue;
-            }
-
-            boolean matchFlip = (viewMode == QuantScapersConfig.NotificationViewMode.FLIP || viewMode == QuantScapersConfig.NotificationViewMode.BOTH)
-                && it.getRoi() >= minROI
-                && it.getRealisticProfit() >= minProfit;
-
-            boolean matchAlch = (viewMode == QuantScapersConfig.NotificationViewMode.ALCH || viewMode == QuantScapersConfig.NotificationViewMode.BOTH)
-                && it.getAlchROI() >= minROI
-                && it.getAlchProfit() >= minProfit;
-
-            if (matchFlip || matchAlch) {
-                currentTickMatches.add(it.getId());
-
-                boolean isNew = matchingNotificationIds.add(it.getId());
-                Long lastNotified = lastNotifiedMs.get(it.getId());
-                boolean cooldownExpired = lastNotified == null || (now - lastNotified > 600_000); // 10 minute cooldown
-
-                if (isNew || cooldownExpired) {
-                    lastNotifiedMs.put(it.getId(), now);
-                    triggerNotification(it, matchFlip, matchAlch);
-                }
-            }
+            if (!isNotificationCandidate(it, maxBuyPrice)) continue;
+            boolean matchFlip = matchesFlipNotification(it, viewMode, minProfit, minROI);
+            boolean matchAlch = matchesAlchNotification(it, viewMode, minProfit, minROI);
+            if (matchFlip || matchAlch) notifyMatch(it, matchFlip, matchAlch, currentTickMatches, now);
         }
 
         matchingNotificationIds.removeIf(id -> !currentTickMatches.contains(id));
+    }
+
+    private static boolean isNotificationCandidate(AnalyzedItem item, long maxBuyPrice) {
+        // Recommendations require both timestamps; a missing timestamp is not stale,
+        // but it cannot prove that the apparent opportunity is fresh.
+        return item.getFullLimitCost() <= maxBuyPrice
+            && VerdictEngine.hasFreshQuotes(item)
+            && !VerdictEngine.isPossibleTrap(item);
+    }
+
+    private static boolean matchesFlipNotification(AnalyzedItem item,
+                                                     QuantScapersConfig.NotificationViewMode mode,
+                                                     long minProfit, double minROI) {
+        return (mode == QuantScapersConfig.NotificationViewMode.FLIP
+            || mode == QuantScapersConfig.NotificationViewMode.BOTH)
+            && item.getRoi() >= minROI
+            && item.getRealisticProfit() >= minProfit;
+    }
+
+    private static boolean matchesAlchNotification(AnalyzedItem item,
+                                                     QuantScapersConfig.NotificationViewMode mode,
+                                                     long minProfit, double minROI) {
+        return (mode == QuantScapersConfig.NotificationViewMode.ALCH
+            || mode == QuantScapersConfig.NotificationViewMode.BOTH)
+            && item.getAlchROI() >= minROI
+            && item.getAlchProfit() >= minProfit;
+    }
+
+    private void notifyMatch(AnalyzedItem item, boolean matchFlip, boolean matchAlch,
+                             Set<Integer> currentTickMatches, long now) {
+        currentTickMatches.add(item.getId());
+        boolean isNew = matchingNotificationIds.add(item.getId());
+        Long lastNotified = lastNotifiedMs.get(item.getId());
+        if (!isNew && lastNotified != null && now - lastNotified <= 600_000) return;
+        lastNotifiedMs.put(item.getId(), now);
+        triggerNotification(item, matchFlip, matchAlch);
     }
 
     private void triggerNotification(AnalyzedItem item, boolean matchFlip, boolean matchAlch) {
@@ -861,7 +823,7 @@ public class QuantScapersPlugin extends Plugin {
         }
     }
 
-    private static final class AutoAuditBudget {
+    private static final class AuditBudget {
         long windowStartMs = System.currentTimeMillis();
         int count = 0;
     }
