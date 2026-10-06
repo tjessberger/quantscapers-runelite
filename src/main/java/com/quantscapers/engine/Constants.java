@@ -36,11 +36,11 @@ public final class Constants {
     public static final String API_BASE = "https://prices.runescape.wiki/api/v1/osrs";
 
     /** GE tax for a sell price, including the tax-free floor and cap. */
-    public static int geTax(int sellPrice) {
+    public static long geTax(long sellPrice) {
         if (sellPrice < TAX_FREE_FLOOR_GP) {
             return 0;
         }
-        return (int) Math.min(Math.floor(sellPrice * TAX_RATE), TAX_CAP_GP);
+        return (long) Math.min(Math.floor(sellPrice * TAX_RATE), TAX_CAP_GP);
     }
 
 }
