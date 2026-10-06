@@ -14,7 +14,7 @@ import java.util.List;
 public final class AuditEngine {
     private AuditEngine() {}
 
-    public static AuditResult audit(List<TimeseriesPoint> points, int targetSellPrice, long nowMs) {
+    public static AuditResult audit(List<TimeseriesPoint> points, long targetSellPrice, long nowMs) {
         int n = points.size();
         List<TimeseriesPoint> last24 = points.subList(Math.max(0, n - 24), n);
         List<TimeseriesPoint> last168 = points.subList(Math.max(0, n - 168), n);

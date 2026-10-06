@@ -23,9 +23,9 @@ public class VaultPrunerTest {
 
     private static PriceQuote quote(Integer high, Long highTime, Integer low, Long lowTime) {
         PriceQuote q = new PriceQuote();
-        q.setHigh(high);
+        q.setHigh(high == null ? null : high.longValue());
         q.setHighTime(highTime);
-        q.setLow(low);
+        q.setLow(low == null ? null : low.longValue());
         q.setLowTime(lowTime);
         return q;
     }

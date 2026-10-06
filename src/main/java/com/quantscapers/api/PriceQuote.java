@@ -8,8 +8,8 @@ import lombok.Data;
  */
 @Data
 public class PriceQuote {
-    private Integer high;
+    private Long high;
     private Long highTime;
-    private Integer low;
+    private Long low;
     private Long lowTime;
 }

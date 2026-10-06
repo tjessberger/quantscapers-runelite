@@ -350,7 +350,7 @@ public class QuantScapersPlugin extends Plugin {
             Map<Integer, PriceQuote> latest = latestResp.getData();
             Map<Integer, VolumeStats> stats24h = stats24hResp.getData();
             Map<Integer, VolumeStats> stats5m = stats5mResp == null ? null : stats5mResp.getData();
-            int natureRuneGp = MarketAnalyzer.extractNatureRuneGp(latest);
+            long natureRuneGp = MarketAnalyzer.extractNatureRuneGp(latest);
 
             List<AnalyzedItem> analyzed = MarketAnalyzer.analyze(mapping, latest, stats24h, stats5m, natureRuneGp, now);
             lastAnalyzed = analyzed;
