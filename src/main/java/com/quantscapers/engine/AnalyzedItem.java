@@ -15,8 +15,8 @@ public class AnalyzedItem {
     int limit;
     int highalch;
 
-    int high;
-    int low;
+    long high;
+    long low;
     long highTime; // unix seconds, 0 if the API gave null
     long lowTime;  // unix seconds, 0 if the API gave null
 
@@ -35,7 +35,7 @@ public class AnalyzedItem {
     double gpHour;
     long fullLimitCost;
 
-    int alchMarginPer;
+    long alchMarginPer;
     long alchProfit;
     double alchROI;
     double alchGpHour;

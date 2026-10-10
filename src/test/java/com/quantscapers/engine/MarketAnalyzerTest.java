@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.gson.Gson;
+import com.quantscapers.api.LatestResponse;
 import com.quantscapers.api.MappingItem;
 import com.quantscapers.api.PriceQuote;
 import com.quantscapers.api.VolumeStats;
@@ -29,11 +31,11 @@ public class MarketAnalyzerTest {
         return m;
     }
 
-    private static PriceQuote quote(Integer high, Long highTime, Integer low, Long lowTime) {
+    private static PriceQuote quote(Number high, Long highTime, Number low, Long lowTime) {
         PriceQuote q = new PriceQuote();
-        q.setHigh(high);
+        q.setHigh(high == null ? null : high.longValue());
         q.setHighTime(highTime);
-        q.setLow(low);
+        q.setLow(low == null ? null : low.longValue());
         q.setLowTime(lowTime);
         return q;
     }
@@ -81,6 +83,33 @@ public class MarketAnalyzerTest {
         assertEquals(1086, ticket.getSellAt());
         assertEquals(504_000L, ticket.getProfit());
         assertEquals(10, ticket.getWaitMin());
+    }
+
+    @Test
+    public void maxCashPrice_parsesAndSurvivesAnalysis() {
+        LatestResponse response = new Gson().fromJson(
+            "{\"data\":{\"1\":{\"high\":2495000000,\"highTime\":1800000000,"
+                + "\"low\":2400000000,\"lowTime\":1800000000}}}",
+            LatestResponse.class);
+
+        Map<Integer, VolumeStats> stats24h = new HashMap<>();
+        stats24h.put(1, stats(2_495_000_000.0, 1, 2_400_000_000.0, 1));
+
+        List<AnalyzedItem> result = MarketAnalyzer.analyze(
+            Collections.singletonList(mapping(1, "Max cash item", 1, 0)),
+            response.getData(),
+            stats24h,
+            null,
+            195,
+            1_800_000_000_000L);
+
+        assertEquals(1, result.size());
+        assertEquals(2_495_000_000L, result.get(0).getHigh());
+        assertEquals(2_400_000_000L, result.get(0).getLow());
+
+        Ticket ticket = TicketBuilder.build(result.get(0));
+        assertEquals(2_400_000_001L, ticket.getBuyAt());
+        assertEquals(2_494_999_999L, ticket.getSellAt());
     }
 
     @Test

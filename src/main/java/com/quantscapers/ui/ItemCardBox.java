@@ -293,7 +293,7 @@ public class ItemCardBox extends JPanel {
         profit.setBorder(BorderFactory.createEmptyBorder(4, 6, 0, 6));
         box.add(profit);
 
-        int natRune = item.getHighalch() - item.getLow() - item.getAlchMarginPer();
+        long natRune = item.getHighalch() - item.getLow() - item.getAlchMarginPer();
         JLabel nature = wrappedLabel("Nature rune cost included (" + GpFormat.withCommas(natRune) + " gp)",
             QSColors.SLATE_500, UiConstants.CARD_TEXT_WIDTH_PX);
         nature.setBorder(BorderFactory.createEmptyBorder(0, 6, 4, 6));
@@ -306,7 +306,7 @@ public class ItemCardBox extends JPanel {
     // so a long "SELL 8 @ 10,210,938" line wraps instead of pushing the button out.
     private static final int TICKET_ROW_TEXT_WIDTH_PX = UiConstants.CARD_TEXT_WIDTH_PX - 32;
 
-    private JPanel ticketRow(String label, long qty, int price, Color labelColor) {
+    private JPanel ticketRow(String label, long qty, long price, Color labelColor) {
         JPanel row = new JPanel(new BorderLayout());
         row.setOpaque(false);
         row.setAlignmentX(LEFT_ALIGNMENT);
@@ -368,12 +368,12 @@ public class ItemCardBox extends JPanel {
         priceLabel.setAlignmentX(LEFT_ALIGNMENT);
         well.add(priceLabel);
 
-        int natRune = item.getHighalch() - item.getLow() - item.getAlchMarginPer();
+        long natRune = item.getHighalch() - item.getLow() - item.getAlchMarginPer();
         well.add(smallLabel("nat rune −" + GpFormat.withCommas(natRune), QSColors.SLATE_500));
         return well;
     }
 
-    private JPanel priceWell(String label, int price, Color color, long timeSec, double avg5m) {
+    private JPanel priceWell(String label, long price, Color color, long timeSec, double avg5m) {
         JPanel well = new JPanel();
         well.setLayout(new BoxLayout(well, BoxLayout.Y_AXIS));
         well.setBackground(QSColors.BG);

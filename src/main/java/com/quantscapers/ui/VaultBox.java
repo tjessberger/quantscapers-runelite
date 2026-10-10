@@ -152,14 +152,14 @@ public class VaultBox extends JPanel {
         content.add(titleRow);
         content.add(Box.createVerticalStrut(6));
 
-        int marginThen = t.getSnapSell() - t.getSnapBuy() - t.getSnapTax();
+        long marginThen = t.getSnapSell() - t.getSnapBuy() - t.getSnapTax();
 
         content.add(priceBlock("THEN", t.getSnapBuy(), t.getSnapSell()));
         content.add(Box.createVerticalStrut(4));
         if (live != null && live.getHigh() != null && live.getLow() != null) {
             content.add(priceBlock("NOW", live.getLow(), live.getHigh()));
 
-            int marginNow = live.getHigh() - live.getLow() - Constants.geTax(live.getHigh());
+            long marginNow = live.getHigh() - live.getLow() - Constants.geTax(live.getHigh());
             long delta = marginNow - marginThen;
             content.add(Box.createVerticalStrut(6));
             content.add(fullWidthLabel(
@@ -205,7 +205,7 @@ public class VaultBox extends JPanel {
      * squeezed into a half column, same reasoning as ItemCardBox's stacked price
      * wells: a bold 9-10 digit price (common on expensive gear) needs the room.
      */
-    private JPanel priceBlock(String label, int buy, int sell) {
+    private JPanel priceBlock(String label, long buy, long sell) {
         JPanel block = new JPanel();
         block.setLayout(new BoxLayout(block, BoxLayout.Y_AXIS));
         block.setOpaque(false);
