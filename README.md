@@ -22,6 +22,11 @@ history, and save items to a local watchlist.
   ticket, or request an hourly price-history audit.
 - **Save items for later.** Your local Watchlist holds up to 25 items and shows
   how their prices and margins have changed since you saved them.
+- **Watch Raids 4 sentiment.** Watchlist opens a Raids 4 community view with
+  the website's top ten ranked items, additional mentions, Rise/Fall/Mixed
+  calls, mention counts, upvotes, and expandable arguments with evidence links.
+  Search or filter calls, then open an item in Scanner. Switch to **My tracked
+  items** for your personal watchlist.
 - **Jump to the website.** The `QUANTSCAPERS.COM` menu opens our market pages
   and gear indices. Updates are posted at
   [@Quantscapers on X](https://x.com/Quantscapers).
@@ -64,6 +69,17 @@ QuantScapers uses the [OSRS Wiki Real-time Prices API](https://prices.runescape.
 
 QuantScapers sends no RuneScape account data, credentials, GE offers,
 telemetry, or cloud sync data, and has no first-party data collection.
+
+The Raids 4 community view bundles the
+[website's watchlist](https://quantscapers.com/market/raids-4-items-to-watch)
+as captured on October 13, 2026, with evidence updated October 12, 2026.
+Community calls and evidence are a dated editorial snapshot, updated with plugin
+releases; they do not sync automatically. They remain readable with Wiki data
+disabled. Current prices use the same latest instant-buy quotes as the website
+and the plugin's existing Wiki snapshot, with trade age shown when available.
+No extra API calls are made. Charts and 24-hour changes stay on the website,
+accessible through the page/history buttons. Community calls are speculation,
+not price forecasts or financial advice.
 
 ## No Grand Exchange automation
 

@@ -1,0 +1,441 @@
+{
+  "sourceUrl": "https://quantscapers.com/market/raids-4-items-to-watch",
+  "capturedAt": "2026-10-13",
+  "evidenceUpdated": "2026-10-12",
+  "title": "Raids 4: The Fractured Archive",
+  "launch": "October 20, 2026",
+  "method": "Reddit posts and comments were collected from January 20 to October 12, 2026; earlier X evidence remains. A call is Rise or Fall when one side has at least twice as many mentions as the other; otherwise it is Mixed. The ranking counts serious mentions and gives recorded upvotes a smaller, logarithmic weight. Scores were unavailable for some recent Reddit mentions.",
+  "items": [
+    {
+      "id": 22486,
+      "rank": 1,
+      "name": "Scythe of Vitur (uncharged)",
+      "url": "https://quantscapers.com/market/item/scythe-of-vitur-uncharged",
+      "call": "Fall",
+      "rise": 15,
+      "fall": 30,
+      "other": 71,
+      "mentions": 119,
+      "upvotes": 729,
+      "riseReason": "Some expect it to stay essential as a strong second-best weapon for early raid runs.",
+      "riseUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1v0sq6e/scythe_short_before_raid/oyhlxd6/",
+      "fallReason": "Others expect the new megarare to take demand away and push Scythe lower after release.",
+      "fallUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1wfmhq3/scythe_is_gonna_tank_shortly_after_the_release_of/"
+    },
+    {
+      "id": 24488,
+      "rank": 2,
+      "name": "Inquisitor's armour set",
+      "url": "https://quantscapers.com/market/item/inquisitors-armour-set",
+      "call": "Rise",
+      "rise": 19,
+      "fall": 7,
+      "other": 34,
+      "mentions": 60,
+      "upvotes": 429,
+      "riseReason": "Crush-focused raid demand could lift the set, with some expecting it to challenge top-tier gear.",
+      "riseUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1sq5977/raids_4_and_blood_moon_do_not_fail_me/",
+      "fallReason": "Skeptics expect holders to sell once the raid meta settles, especially after its recent run-up.",
+      "fallUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1wzb7ck/i_feel_like_raids4_was_designed_specifically_with/pea36sg/"
+    },
+    {
+      "id": 24511,
+      "rank": 3,
+      "name": "Harmonised orb",
+      "url": "https://quantscapers.com/market/item/harmonised-orb",
+      "call": "Mixed",
+      "rise": 12,
+      "fall": 8,
+      "other": 36,
+      "mentions": 56,
+      "upvotes": 212,
+      "riseReason": "Low supply and a possible best-in-slot role could keep demand rising alongside other high-end magic gear.",
+      "riseUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1wzb7ck/i_feel_like_raids4_was_designed_specifically_with/",
+      "fallReason": "Skeptics expect a correction once players settle the meta or sell before release after the recent rise.",
+      "fallUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1wzb7ck/i_feel_like_raids4_was_designed_specifically_with/pea36sg/"
+    },
+    {
+      "id": 20997,
+      "rank": 4,
+      "name": "Twisted bow",
+      "url": "https://quantscapers.com/market/item/twisted-bow",
+      "call": "Mixed",
+      "rise": 12,
+      "fall": 7,
+      "other": 29,
+      "mentions": 49,
+      "upvotes": 74,
+      "riseReason": "Buyers point to reduced Chambers of Xeric activity and its lack of direct overlap with the new melee weapons.",
+      "riseUrl": "https://www.reddit.com/r/OSRSflipping/comments/1wyk8q9/investment_ideas_for_the_next_year_of_osrs/",
+      "fallReason": "Others think a melee and crush-heavy raid will redirect demand and keep sellers ahead of buyers.",
+      "fallUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1wikm9g/twisted_bow/"
+    },
+    {
+      "id": 22477,
+      "rank": 5,
+      "name": "Avernic defender hilt",
+      "url": "https://quantscapers.com/market/item/avernic-defender-hilt",
+      "call": "Rise",
+      "rise": 13,
+      "fall": 4,
+      "other": 12,
+      "mentions": 30,
+      "upvotes": 157,
+      "riseReason": "A melee-heavy raid could increase demand for strong melee setups, while limited supply may magnify moves.",
+      "riseUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1t4iq9j/avernic_defender_hilt_long_term_hold/ok2w99k/",
+      "fallReason": "Some think a competing shield reward could weaken Avernic demand or add pressure from other raid-linked items.",
+      "fallUrl": "https://www.reddit.com/r/2007scape/comments/1uagbm6/cox_and_tob_reward_tables_need_to_be_addressed/oso5v87/"
+    },
+    {
+      "id": 22438,
+      "rank": 6,
+      "name": "Justiciar armour set",
+      "url": "https://quantscapers.com/market/item/justiciar-armour-set",
+      "call": "Rise",
+      "rise": 6,
+      "fall": 3,
+      "other": 13,
+      "mentions": 22,
+      "upvotes": 291,
+      "riseReason": "Some see it as useful defensive gear while teams learn the raid mechanics before switching to damage setups.",
+      "riseUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1w34ibv/justiciar_bet/",
+      "fallReason": "Others expect players to sell after short-term use, since the rewards do not confirm lasting raid demand.",
+      "fallUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1vr2lpy/justiciary_armor/p4b8i0u/"
+    },
+    {
+      "id": 24417,
+      "rank": 7,
+      "name": "Inquisitor's mace",
+      "url": "https://quantscapers.com/market/item/inquisitors-mace",
+      "call": "Fall",
+      "rise": 4,
+      "fall": 8,
+      "other": 18,
+      "mentions": 31,
+      "upvotes": 185,
+      "riseReason": "The mace could be part of a strong melee setup, and some see more use if it proves best in slot.",
+      "riseUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1rm7q6v/raids_4_scythesoulreaper_axeinq_mace_about_to_go/",
+      "fallReason": "Others expect its price to fall as raid buyers exit or the new crush megarare competes for the same role.",
+      "fallUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1x107s3/do_you_think_we_see_a_correction_of_inq_armormace/pepaueb/"
+    },
+    {
+      "id": 28338,
+      "rank": 8,
+      "name": "Soulreaper axe",
+      "url": "https://quantscapers.com/market/item/soulreaper-axe",
+      "call": "Rise",
+      "rise": 12,
+      "fall": 1,
+      "other": 16,
+      "mentions": 29,
+      "upvotes": 119,
+      "riseReason": "Some expect the axe to serve as a second-best melee weapon before players obtain the raid megarare.",
+      "riseUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1u1rbls/how_high_will_sra_land/",
+      "fallReason": "If the megarare uses crush, some expect it to reduce demand for the axe.",
+      "fallUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1u1rbls/how_high_will_sra_land/oqsq4sw/"
+    },
+    {
+      "id": 29580,
+      "rank": 9,
+      "name": "Tormented synapse",
+      "url": "https://quantscapers.com/market/item/tormented-synapse",
+      "call": "Mixed",
+      "rise": 6,
+      "fall": 7,
+      "other": 16,
+      "mentions": 29,
+      "upvotes": 103,
+      "riseReason": "Raid demon encounters could support demand, and some expect players to buy ahead of release.",
+      "riseUrl": "https://www.reddit.com/r/OSRSflipping/comments/1x0ntc1/pem3fks/",
+      "fallReason": "Others say only one boss is weak to demonbane and doubt the raid will lift synapse prices.",
+      "fallUrl": "https://www.reddit.com/r/GrandExchangeBets/comments/1wyzw0d/synapses_to_the_moon/pe78cdz/"
+    },
+    {
+      "id": 27277,
+      "rank": 10,
+      "name": "Tumeken's shadow (uncharged)",
+      "url": "https://quantscapers.com/market/item/tumekens-shadow-uncharged",
+      "call": "Mixed",
+      "rise": 7,
+      "fall": 6,
+      "other": 30,
+      "mentions": 44,
+      "upvotes": 33,
+      "riseReason": "Some expect a Shadow rework to increase demand by making it stronger without max mage gear.",
+      "riseUrl": "https://www.reddit.com/r/OSRSflipping/comments/1vxd88v/shadow_rework/p5q0ho6/",
+      "fallReason": "Others expect a price drop if Harm proves better than Shadow in the new raid.",
+      "fallUrl": "https://www.reddit.com/r/2007scape/comments/1x1816h/"
+    },
+    {
+      "id": 6685,
+      "name": "Saradomin brew(4)",
+      "call": "Mixed",
+      "mentions": 22,
+      "upvotes": 88,
+      "url": "https://quantscapers.com/market/item/saradomin-brew-4"
+    },
+    {
+      "id": 29684,
+      "name": "Guthixian temple teleport",
+      "call": "Rise",
+      "mentions": 23,
+      "upvotes": 92,
+      "url": "https://quantscapers.com/market/item/guthixian-temple-teleport"
+    },
+    {
+      "id": 3024,
+      "name": "Super restore(4)",
+      "call": "Rise",
+      "mentions": 13,
+      "upvotes": 76,
+      "url": "https://quantscapers.com/market/item/super-restore-4"
+    },
+    {
+      "id": 31145,
+      "name": "Torva armour set",
+      "call": "Mixed",
+      "mentions": 17,
+      "upvotes": 114,
+      "url": "https://quantscapers.com/market/item/torva-armour-set"
+    },
+    {
+      "id": 30759,
+      "name": "Soulflame horn",
+      "call": "Rise",
+      "mentions": 12,
+      "upvotes": 56,
+      "url": "https://quantscapers.com/market/item/soulflame-horn"
+    },
+    {
+      "id": 21034,
+      "name": "Dexterous prayer scroll",
+      "call": "Fall",
+      "mentions": 12,
+      "upvotes": 51,
+      "url": "https://quantscapers.com/market/item/dexterous-prayer-scroll"
+    },
+    {
+      "id": 21015,
+      "name": "Dinh's bulwark",
+      "call": "Mixed",
+      "mentions": 13,
+      "upvotes": 181,
+      "url": "https://quantscapers.com/market/item/dinhs-bulwark"
+    },
+    {
+      "id": 23685,
+      "name": "Divine super combat potion(4)",
+      "call": "Rise",
+      "mentions": 14,
+      "upvotes": 52,
+      "url": "https://quantscapers.com/market/item/divine-super-combat-potion-4"
+    },
+    {
+      "id": 34027,
+      "name": "Hallowfell",
+      "call": "Rise",
+      "mentions": 13,
+      "upvotes": 37,
+      "url": "https://quantscapers.com/market/item/hallowfell"
+    },
+    {
+      "id": 13263,
+      "name": "Abyssal bludgeon",
+      "call": "Rise",
+      "mentions": 9,
+      "upvotes": 69,
+      "url": "https://quantscapers.com/market/item/abyssal-bludgeon"
+    },
+    {
+      "id": 33631,
+      "name": "Crimson kisten",
+      "call": "Rise",
+      "mentions": 14,
+      "upvotes": 20,
+      "url": "https://quantscapers.com/market/item/crimson-kisten"
+    },
+    {
+      "id": 28307,
+      "name": "Ultor ring",
+      "call": "Rise",
+      "mentions": 15,
+      "upvotes": 26,
+      "url": "https://quantscapers.com/market/item/ultor-ring"
+    },
+    {
+      "id": 21003,
+      "name": "Elder maul",
+      "call": "Rise",
+      "mentions": 11,
+      "upvotes": 89,
+      "url": "https://quantscapers.com/market/item/elder-maul"
+    },
+    {
+      "id": 23528,
+      "name": "Sarachnis cudgel",
+      "call": "Rise",
+      "mentions": 11,
+      "upvotes": 25,
+      "url": "https://quantscapers.com/market/item/sarachnis-cudgel"
+    },
+    {
+      "id": 12924,
+      "name": "Toxic blowpipe (empty)",
+      "call": "Fall",
+      "mentions": 9,
+      "upvotes": 34,
+      "url": "https://quantscapers.com/market/item/toxic-blowpipe-empty"
+    },
+    {
+      "id": 24777,
+      "name": "Blood shard",
+      "call": "Rise",
+      "mentions": 7,
+      "upvotes": 25,
+      "url": "https://quantscapers.com/market/item/blood-shard"
+    },
+    {
+      "id": 385,
+      "name": "Shark",
+      "call": "Mixed",
+      "mentions": 6,
+      "upvotes": 37,
+      "url": "https://quantscapers.com/market/item/shark"
+    },
+    {
+      "id": 26382,
+      "name": "Torva full helm",
+      "call": "Rise",
+      "mentions": 7,
+      "upvotes": 16,
+      "url": "https://quantscapers.com/market/item/torva-full-helm"
+    },
+    {
+      "id": 22446,
+      "name": "Vial of blood",
+      "call": "Rise",
+      "mentions": 6,
+      "upvotes": 25,
+      "url": "https://quantscapers.com/market/item/vial-of-blood"
+    },
+    {
+      "id": 12817,
+      "name": "Elysian spirit shield",
+      "call": "Fall",
+      "mentions": 5,
+      "upvotes": 24,
+      "url": "https://quantscapers.com/market/item/elysian-spirit-shield"
+    },
+    {
+      "id": 30634,
+      "name": "Twinflame staff",
+      "call": "Mixed",
+      "mentions": 6,
+      "upvotes": 23,
+      "url": "https://quantscapers.com/market/item/twinflame-staff"
+    },
+    {
+      "id": 9194,
+      "name": "Onyx bolt tips",
+      "call": "Mixed",
+      "mentions": 4,
+      "upvotes": 49,
+      "url": "https://quantscapers.com/market/item/onyx-bolt-tips"
+    },
+    {
+      "id": 33631,
+      "name": "Crimson kisten",
+      "call": "Mixed",
+      "mentions": 10,
+      "upvotes": 6,
+      "url": "https://quantscapers.com/market/item/crimson-kisten"
+    },
+    {
+      "id": 30002,
+      "name": "Chugging barrel (disassembled)",
+      "call": "Rise",
+      "mentions": 3,
+      "upvotes": 30,
+      "url": "https://quantscapers.com/market/item/chugging-barrel-disassembled"
+    },
+    {
+      "id": 13576,
+      "name": "Dragon warhammer",
+      "call": "Rise",
+      "mentions": 4,
+      "upvotes": 13,
+      "url": "https://quantscapers.com/market/item/dragon-warhammer"
+    },
+    {
+      "id": 31106,
+      "name": "Confliction gauntlets",
+      "call": "Mixed",
+      "mentions": 3,
+      "upvotes": 27,
+      "url": "https://quantscapers.com/market/item/confliction-gauntlets"
+    },
+    {
+      "id": 22324,
+      "name": "Ghrazi rapier",
+      "call": "Rise",
+      "mentions": 8,
+      "upvotes": 2,
+      "url": "https://quantscapers.com/market/item/ghrazi-rapier"
+    },
+    {
+      "id": 21880,
+      "name": "Wrath rune",
+      "call": "Rise",
+      "mentions": 3,
+      "upvotes": 12,
+      "url": "https://quantscapers.com/market/item/wrath-rune"
+    },
+    {
+      "id": 565,
+      "name": "Blood rune",
+      "call": "Rise",
+      "mentions": 3,
+      "upvotes": 14,
+      "url": "https://quantscapers.com/market/item/blood-rune"
+    },
+    {
+      "id": 561,
+      "name": "Nature rune",
+      "call": "Rise",
+      "mentions": 4,
+      "upvotes": 6,
+      "url": "https://quantscapers.com/market/item/nature-rune"
+    },
+    {
+      "id": 25859,
+      "name": "Enhanced crystal weapon seed",
+      "call": "Rise",
+      "mentions": 3,
+      "upvotes": 8,
+      "url": "https://quantscapers.com/market/item/enhanced-crystal-weapon-seed"
+    },
+    {
+      "id": 27641,
+      "name": "Saturated heart",
+      "call": "Mixed",
+      "mentions": 3,
+      "upvotes": 4,
+      "url": "https://quantscapers.com/market/item/saturated-heart"
+    },
+    {
+      "id": 11212,
+      "name": "Dragon arrow",
+      "call": "Rise",
+      "mentions": 3,
+      "upvotes": 0,
+      "url": "https://quantscapers.com/market/item/dragon-arrow"
+    }
+  ],
+  "unreleased": [
+    "Obligator: Posts weigh strong early demand against concern that a narrow use could limit lasting interest.",
+    "Ascension crossbows: Posts expect a powerful weapon, but its eventual rarity and effect on ammunition remain open questions.",
+    "Rondache: Some expect narrow use and limited value; others say the extra risk of carrying it could bring an advantage in PvP.",
+    "Zeal: Posts disagree over how common it will be and whether it will remain expensive after release.",
+    "Zorya's Tome: Some like its special attack, while others expect a niche role and limited demand."
+  ]
+}

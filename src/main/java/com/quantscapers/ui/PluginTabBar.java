@@ -15,7 +15,7 @@ public class PluginTabBar extends JPanel {
 
     private final JButton overview = button("OVERVIEW", "Market Intelligence and Top Picks");
     private final JButton scanner = button("SCANNER", "Search and scan market opportunities");
-    private final JButton watchlist = button("WATCHLIST", "Tracked items and price changes");
+    private final JButton watchlist = button("WATCHLIST", "Raids 4 community calls and your tracked items");
     private Tab selected = Tab.OVERVIEW;
 
     public PluginTabBar(java.util.function.Consumer<Tab> onSelect) {

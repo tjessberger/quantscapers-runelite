@@ -41,6 +41,7 @@ public class SiteLinksBar extends JPanel {
         menu.add(menuItem("Market Overview", SITE + "/market"));
         menu.add(menuItem("Full Item Table", SITE + "/market/table"));
         menu.add(menuItem("Gear Indices", SITE + "/market/indices"));
+        menu.add(menuItem("Raids 4 Watchlist", SITE + "/market/raids-4-items-to-watch"));
         return menu;
     }
 

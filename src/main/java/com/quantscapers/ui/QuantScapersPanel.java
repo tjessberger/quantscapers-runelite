@@ -22,6 +22,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
@@ -49,6 +50,8 @@ public class QuantScapersPanel extends PluginPanel {
     private final TopPicksBox topPicksBox;
     private final MarketPulseBox marketPulseBox;
     private final VaultBox vaultBox;
+    private final RaidsWatchlistBox raidsWatchlistBox;
+    private final JComboBox<String> watchlistView;
     private final JPanel errorBanner;
     private final JPanel wikiDataNotice;
     private final ScrollableListPanel overviewContainer;
@@ -96,6 +99,10 @@ public class QuantScapersPanel extends PluginPanel {
         vaultBox = new VaultBox(plugin);
         vaultBox.addPropertyChangeListener("untrack", e -> plugin.untrack((Integer) e.getNewValue()));
         vaultBox.addPropertyChangeListener("auditComplete", e -> refreshAuditsAndRerender());
+        raidsWatchlistBox = new RaidsWatchlistBox(this::openInScanner);
+        watchlistView = new JComboBox<>(new String[]{"Raids 4 community", "My tracked items"});
+        watchlistView.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+        watchlistView.getAccessibleContext().setAccessibleName("Watchlist view");
 
         errorBanner = buildErrorBanner();
         errorBanner.setVisible(false);
@@ -127,8 +134,18 @@ public class QuantScapersPanel extends PluginPanel {
         // halfway across the panel even though both components allowed full width.
         alignLeft(scannerContainer);
 
+        watchlistContainer.add(watchlistView);
+        watchlistContainer.add(Box.createVerticalStrut(6));
+        watchlistContainer.add(raidsWatchlistBox);
         watchlistContainer.add(vaultBox);
         watchlistContainer.add(watchlistState);
+        watchlistView.addActionListener(e -> {
+            refreshWatchlistVisibility();
+            revalidate();
+            repaint();
+        });
+        refreshWatchlistVisibility();
+        alignLeft(watchlistContainer);
 
         JPanel north = new JPanel();
         north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
@@ -184,6 +201,7 @@ public class QuantScapersPanel extends PluginPanel {
         for (ItemCardBox card : liveCards) {
             card.refreshAges(now);
         }
+        raidsWatchlistBox.refreshAges(now);
     }
 
     private void showTab(PluginTabBar.Tab tab) {
@@ -198,14 +216,18 @@ public class QuantScapersPanel extends PluginPanel {
 
     /** Sends an Overview insight into the execution-oriented Scanner without fetching again. */
     private void openInScanner(AnalyzedItem item) {
-        plugin.setSearchTerm(item.getName());
+        openInScanner(item.getName());
+    }
+
+    private void openInScanner(String name) {
+        plugin.setSearchTerm(name);
         showTab(PluginTabBar.Tab.SCANNER);
     }
 
     /** Called on the EDT by the plugin after every successful analysis tick. */
     public void render(List<AnalyzedItem> display, List<AnalyzedItem> topPicks, List<AnalyzedItem> market,
                         Map<Integer, AuditResult> auditCache, List<TrackedTrade> vault,
-                        Map<Integer, PriceQuote> vaultLive, int totalMatched,
+                        Map<Integer, PriceQuote> vaultLive, Map<Integer, PriceQuote> latest, int totalMatched,
                         int suppressedCount, boolean showSuppressed, boolean syncOk) {
         gateShown = false;
         countdown = Constants.HEARTBEAT_SECONDS;
@@ -219,6 +241,8 @@ public class QuantScapersPanel extends PluginPanel {
         lastVault = vault;
         lastVaultLive = vaultLive;
         lastTotalMatched = totalMatched;
+        raidsWatchlistBox.update(plugin.getConfig().enableWikiMarketData()
+            ? latest : java.util.Collections.emptyMap());
         marketPulseBox.update(market);
         filterBar.setSuppressedInfo(suppressedCount, showSuppressed);
         errorBanner.setVisible(!syncOk);
@@ -250,19 +274,19 @@ public class QuantScapersPanel extends PluginPanel {
         listContainer.add(scannerState);
         watchlistState.setContent("Wiki market data is off", "Open plugin settings to refresh tracked prices.");
         watchlistState.setVisible(true);
-        tabBar.setWatchlistCount(0);
+        raidsWatchlistBox.update(java.util.Collections.emptyMap());
+        refreshWatchlistVisibility();
         revalidate();
         repaint();
     }
 
     private void rerenderFromCache() {
-        int scannerScroll = selectedTab == PluginTabBar.Tab.SCANNER
-            ? contentScrollPane.getViewport().getViewPosition().y : 0;
+        PluginTabBar.Tab renderedTab = selectedTab;
+        int scroll = contentScrollPane.getViewport().getViewPosition().y;
 
         filterBar.setLeadsCount(lastTotalMatched);
         topPicksBox.update(lastTopPicks, lastAuditCache);
         vaultBox.update(lastVault, lastVaultLive, lastAuditCache, analyzedById(lastMarket));
-        tabBar.setWatchlistCount(lastVault.size());
         overviewState.setVisible(!marketPulseBox.isVisible() && !topPicksBox.isVisible());
         if (overviewState.isVisible()) {
             overviewState.setContent("No market data yet", "Market Intelligence appears after a successful refresh.");
@@ -271,16 +295,28 @@ public class QuantScapersPanel extends PluginPanel {
         if (watchlistState.isVisible()) {
             watchlistState.setContent("WATCHLIST", "Track an item in Scanner to see it here.");
         }
+        refreshWatchlistVisibility();
 
         renderScannerList();
         revalidate();
         repaint();
 
-        if (selectedTab == PluginTabBar.Tab.SCANNER) {
-            javax.swing.SwingUtilities.invokeLater(() -> contentScrollPane.getViewport().setViewPosition(
-                new java.awt.Point(0, Math.min(scannerScroll,
-                    Math.max(0, scannerContainer.getHeight() - contentScrollPane.getViewport().getHeight())))));
+        if (renderedTab != PluginTabBar.Tab.OVERVIEW) {
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                if (selectedTab != renderedTab) return;
+                JPanel content = renderedTab == PluginTabBar.Tab.SCANNER ? scannerContainer : watchlistContainer;
+                contentScrollPane.getViewport().setViewPosition(new java.awt.Point(0, Math.min(scroll,
+                    Math.max(0, content.getHeight() - contentScrollPane.getViewport().getHeight()))));
+            });
         }
+    }
+
+    private void refreshWatchlistVisibility() {
+        boolean personal = watchlistView.getSelectedIndex() == 1;
+        raidsWatchlistBox.setVisible(!personal);
+        vaultBox.setVisible(personal && !gateShown && !lastVault.isEmpty());
+        watchlistState.setVisible(personal && (gateShown || lastVault.isEmpty()));
+        tabBar.setWatchlistCount(personal && !gateShown ? lastVault.size() : 0);
     }
 
     private void renderScannerList() {

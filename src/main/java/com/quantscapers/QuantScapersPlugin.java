@@ -399,7 +399,7 @@ public class QuantScapersPlugin extends Plugin {
             }
         }
 
-        SwingUtilities.invokeLater(() -> panel.render(display, topPicks, lastAnalyzed, snapshot, vaultSnapshot, vaultLive,
+        SwingUtilities.invokeLater(() -> panel.render(display, topPicks, lastAnalyzed, snapshot, vaultSnapshot, vaultLive, latestSnapshot,
             totalMatched, result.suppressedCount, showSuppressed, true));
     }
 
