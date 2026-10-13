@@ -14,6 +14,7 @@ import com.quantscapers.engine.AuditEngine;
 import com.quantscapers.engine.AuditResult;
 import com.quantscapers.engine.Constants;
 import com.quantscapers.engine.MarketAnalyzer;
+import com.quantscapers.engine.RaidsWatchlist;
 import com.quantscapers.engine.SuppressionEngine;
 import com.quantscapers.engine.TrackedTrade;
 import com.quantscapers.engine.VaultPruner;
@@ -131,7 +132,7 @@ public class QuantScapersPlugin extends Plugin {
     @Override
     protected void startUp() {
         client = new WikiPricesClient(okHttpClient, gson);
-        panel = new QuantScapersPanel(this);
+        panel = new QuantScapersPanel(this, RaidsWatchlist.load(gson));
         loadPersistedAuditCache();
         loadPersistedVault();
         loadPersistedSuppressed();

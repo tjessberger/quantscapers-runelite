@@ -1,5 +1,6 @@
 package com.quantscapers.ui;
 
+import com.google.gson.Gson;
 import com.quantscapers.QuantScapersConfig;
 import com.quantscapers.QuantScapersPlugin;
 import com.quantscapers.api.PriceQuote;
@@ -25,7 +26,7 @@ import static org.junit.Assert.*;
 public class RaidsWatchlistTest {
     @Test
     public void snapshotPreservesPageRanksCountsAndEvidence() {
-        RaidsWatchlist data = RaidsWatchlist.load();
+        RaidsWatchlist data = RaidsWatchlist.load(new Gson());
         assertEquals("2026-10-12", data.getEvidenceUpdated());
         assertEquals("2026-10-13", data.getCapturedAt());
         assertEquals(43, data.getItems().size());
@@ -53,7 +54,7 @@ public class RaidsWatchlistTest {
 
     @Test
     public void filtersAndMissingPricesDoNotInventSignals() {
-        RaidsWatchlist.Entry scythe = RaidsWatchlist.load().getItems().get(0);
+        RaidsWatchlist.Entry scythe = RaidsWatchlist.load(new Gson()).getItems().get(0);
         assertTrue(scythe.matches("  SCYTHE ", "Fall"));
         assertFalse(scythe.matches("scythe", "Rise"));
         assertFalse(scythe.matches("shark", "All calls"));
@@ -71,7 +72,7 @@ public class RaidsWatchlistTest {
     public void localUiKeepsFiltersAndExpandedEvidenceAcrossPriceUpdates() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             AtomicReference<String> scanned = new AtomicReference<>();
-            RaidsWatchlistBox box = new RaidsWatchlistBox(scanned::set);
+            RaidsWatchlistBox box = new RaidsWatchlistBox(RaidsWatchlist.load(new Gson()), scanned::set);
             find(box, JTextField.class).get(0).setText("Scythe");
             assertEquals(1, find(box, JToggleButton.class).size());
             find(box, JToggleButton.class).get(0).doClick();
@@ -109,7 +110,7 @@ public class RaidsWatchlistTest {
                     };
                 }
             };
-            QuantScapersPanel panel = new QuantScapersPanel(plugin);
+            QuantScapersPanel panel = new QuantScapersPanel(plugin, RaidsWatchlist.load(new Gson()));
             panel.showWikiDataGate();
             find(panel, JButton.class).stream().filter(b -> "WATCHLIST".equals(b.getText()))
                 .findFirst().get().doClick();

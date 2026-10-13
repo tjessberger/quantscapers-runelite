@@ -21,11 +21,11 @@ public class RaidsWatchlist {
     private List<Entry> items;
     private List<String> unreleased;
 
-    public static RaidsWatchlist load() {
+    public static RaidsWatchlist load(Gson gson) {
         InputStream stream = RaidsWatchlist.class.getResourceAsStream("/com/quantscapers/raids4-watchlist.json");
         if (stream == null) throw new IllegalStateException("Missing Raids 4 watchlist snapshot");
         try (InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
-            return new Gson().fromJson(reader, RaidsWatchlist.class);
+            return gson.fromJson(reader, RaidsWatchlist.class);
         } catch (IOException e) {
             throw new IllegalStateException("Cannot read Raids 4 watchlist snapshot", e);
         }

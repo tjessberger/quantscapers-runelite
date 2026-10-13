@@ -6,6 +6,7 @@ import com.quantscapers.api.PriceQuote;
 import com.quantscapers.engine.AnalyzedItem;
 import com.quantscapers.engine.AuditResult;
 import com.quantscapers.engine.Constants;
+import com.quantscapers.engine.RaidsWatchlist;
 import com.quantscapers.engine.TrackedTrade;
 import java.awt.BorderLayout;
 import java.awt.Cursor;
@@ -81,7 +82,7 @@ public class QuantScapersPanel extends PluginPanel {
     private Timer countdownTimer;
     private int countdown = Constants.HEARTBEAT_SECONDS;
 
-    public QuantScapersPanel(QuantScapersPlugin plugin) {
+    public QuantScapersPanel(QuantScapersPlugin plugin, RaidsWatchlist watchlist) {
         super(false);
         this.plugin = plugin;
 
@@ -99,7 +100,7 @@ public class QuantScapersPanel extends PluginPanel {
         vaultBox = new VaultBox(plugin);
         vaultBox.addPropertyChangeListener("untrack", e -> plugin.untrack((Integer) e.getNewValue()));
         vaultBox.addPropertyChangeListener("auditComplete", e -> refreshAuditsAndRerender());
-        raidsWatchlistBox = new RaidsWatchlistBox(this::openInScanner);
+        raidsWatchlistBox = new RaidsWatchlistBox(watchlist, this::openInScanner);
         watchlistView = new JComboBox<>(new String[]{"Raids 4 community", "My tracked items"});
         watchlistView.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
         watchlistView.getAccessibleContext().setAccessibleName("Watchlist view");

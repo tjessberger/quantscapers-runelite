@@ -32,7 +32,7 @@ import net.runelite.client.util.LinkBrowser;
 
 /** Community watchlist using only the existing Wiki price snapshot. */
 public class RaidsWatchlistBox extends JPanel {
-    private final RaidsWatchlist data = RaidsWatchlist.load();
+    private final RaidsWatchlist data;
     private final JTextField search = new JTextField();
     private final JComboBox<String> calls = new JComboBox<>(new String[]{"All calls", "Rise", "Fall", "Mixed"});
     private final JPanel rows = column();
@@ -41,7 +41,8 @@ public class RaidsWatchlistBox extends JPanel {
     private final Consumer<String> openScanner;
     private Map<Integer, PriceQuote> prices = Collections.emptyMap();
 
-    public RaidsWatchlistBox(Consumer<String> openScanner) {
+    public RaidsWatchlistBox(RaidsWatchlist data, Consumer<String> openScanner) {
+        this.data = data;
         this.openScanner = openScanner;
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setOpaque(false);
