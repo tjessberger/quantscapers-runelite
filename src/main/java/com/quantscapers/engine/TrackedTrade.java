@@ -15,9 +15,9 @@ import lombok.Value;
 public class TrackedTrade {
     int id;
     String name;
-    int snapBuy;
-    int snapSell;
-    int snapTax;
+    long snapBuy;
+    long snapSell;
+    long snapTax;
     long trackedAtMs;
     long lastSeenHealthyMs; // persisted dead-quote grace state; advanced only by real fetches
 }

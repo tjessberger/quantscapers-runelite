@@ -14,14 +14,14 @@ public final class TicketBuilder {
         if (qty <= 0) {
             return null;
         }
-        int buyAt = item.getLow() + 1;
-        int sellAt = Math.max(item.getHigh() - 1, 0);
-        int tax = Constants.geTax(sellAt);
-        int perUnit = sellAt - buyAt - tax;
+        long buyAt = item.getLow() + 1;
+        long sellAt = Math.max(item.getHigh() - 1, 0);
+        long tax = Constants.geTax(sellAt);
+        long perUnit = sellAt - buyAt - tax;
         if (perUnit <= 0) {
             return null;
         }
-        long profit = (long) perUnit * qty;
+        long profit = perUnit * qty;
         int waitMin = (int) Math.max(5, Math.ceil(item.getEft()));
         return new Ticket(qty, buyAt, sellAt, profit, waitMin);
     }

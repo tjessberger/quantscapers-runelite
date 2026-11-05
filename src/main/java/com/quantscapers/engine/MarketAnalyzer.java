@@ -22,7 +22,7 @@ public final class MarketAnalyzer {
         Map<Integer, PriceQuote> latest,
         Map<Integer, VolumeStats> stats24h,
         Map<Integer, VolumeStats> stats5m, // may be null - feed is optional
-        int natureRuneGp,
+        long natureRuneGp,
         long nowMs
     ) {
         List<AnalyzedItem> out = new ArrayList<>(mapping.size());
@@ -32,13 +32,13 @@ public final class MarketAnalyzer {
                 continue;
             }
 
-            int high = p.getHigh();
-            int low = p.getLow();
+            long high = p.getHigh();
+            long low = p.getLow();
             int limit = item.limitOrZero();
             int highalch = item.highalchOrZero();
 
-            int tax = Constants.geTax(high);
-            int margin = high - low - tax;
+            long tax = Constants.geTax(high);
+            long margin = high - low - tax;
 
             VolumeStats s = stats24h == null ? null : stats24h.get(item.getId());
             long vol24h = s == null ? 0 : s.getHighPriceVolume() + s.getLowPriceVolume();
@@ -66,7 +66,7 @@ public final class MarketAnalyzer {
             double avg5mHigh = (f != null && f.getAvgHighPrice() != null) ? f.getAvgHighPrice() : 0;
             double avg5mLow = (f != null && f.getAvgLowPrice() != null) ? f.getAvgLowPrice() : 0;
 
-            int alchMarginPer = highalch > 0 ? highalch - low - natureRuneGp : 0;
+            long alchMarginPer = highalch > 0 ? highalch - low - natureRuneGp : 0;
             long alchProfit = alchMarginPer > 0 ? (long) alchMarginPer * effectiveQty : 0;
             double alchROI = (alchMarginPer > 0 && low > 0) ? alchMarginPer * 100.0 / low : 0;
             double alchGpHour = alchProfit / roundTripHrs;
@@ -107,7 +107,7 @@ public final class MarketAnalyzer {
      * absent. Mirrors engine.html's `latest.data?.[561]?.low || 195`, where a
      * 0 price (JS-falsy) also falls back — not just a missing one.
      */
-    public static int extractNatureRuneGp(Map<Integer, PriceQuote> latest) {
+    public static long extractNatureRuneGp(Map<Integer, PriceQuote> latest) {
         if (latest == null) {
             return Constants.NATURE_RUNE_FALLBACK_GP;
         }
